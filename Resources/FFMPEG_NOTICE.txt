@@ -1,0 +1,18 @@
+Bundled FFmpeg Notice
+=====================
+
+The delivered app bundle includes an Apple Silicon ffmpeg 8.1 executable for
+local audio transcoding.
+
+Binary source:
+https://osxexperts.net/
+
+Downloaded file checksum before ad-hoc signing:
+SHA256 9a08d61f9328e8164ba560ee7a79958e357307fcfeea6fe626b7d66cdc287028
+
+The bundled binary reports `--enable-gpl` in its ffmpeg configuration.
+FFmpeg licensing and source information:
+https://ffmpeg.org/
+https://github.com/FFmpeg/FFmpeg
+
+Use this app only with audio files you are allowed to convert.

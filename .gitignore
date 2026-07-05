@@ -1,0 +1,12 @@
+.DS_Store
+.build/
+build/
+*.xcuserstate
+*.swp
+*.pyc
+__pycache__/
+Resources/ffmpeg
+Resources/ffmpeg*.zip
+dist/*.app/
+dist/*.tar.gz
+!dist/NCM批量转MP3-SwiftUI.app.zip
