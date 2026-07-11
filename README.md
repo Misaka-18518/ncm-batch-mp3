@@ -16,7 +16,7 @@
 - 优先输出 MP3 / 保留原始格式
 - 队列状态、进度条、日志
 - 内置 Apple Silicon ffmpeg 8.1，无需用户另装 ffmpeg
-- macOS 13.0+ deployment target，已在 macOS 27 beta2 环境修复最低系统版本问题
+- macOS 15.0+ deployment target，面向 macOS 15-27 做兼容；macOS 26+ 在拖拽区和操作区使用系统玻璃效果，旧系统自动降级为兼容材质
 
 ## 下载
 

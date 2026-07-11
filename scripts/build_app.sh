@@ -16,9 +16,9 @@ mkdir -p "$BUILD_DIR/ModuleCache" "$BUILD_DIR/SwiftModuleCache" "$DIST_DIR"
 echo "Building SwiftUI app..."
 CLANG_MODULE_CACHE_PATH="$BUILD_DIR/ModuleCache" \
 SWIFT_MODULE_CACHE_PATH="$BUILD_DIR/SwiftModuleCache" \
-MACOSX_DEPLOYMENT_TARGET=13.0 \
+MACOSX_DEPLOYMENT_TARGET=15.0 \
 swiftc \
-  -target arm64-apple-macosx13.0 \
+  -target arm64-apple-macosx15.0 \
   -parse-as-library \
   -O \
   -o "$BUILD_DIR/NCMConverter" \
@@ -39,9 +39,9 @@ chmod +x "$EXECUTABLE"
 echo "Generating icon..."
 CLANG_MODULE_CACHE_PATH="$BUILD_DIR/ModuleCache" \
 SWIFT_MODULE_CACHE_PATH="$BUILD_DIR/SwiftModuleCache" \
-MACOSX_DEPLOYMENT_TARGET=13.0 \
+MACOSX_DEPLOYMENT_TARGET=15.0 \
 swiftc \
-  -target arm64-apple-macosx13.0 \
+  -target arm64-apple-macosx15.0 \
   -o "$BUILD_DIR/make_icon" \
   "$ROOT_DIR/scripts/make_icon.swift" \
   -framework AppKit

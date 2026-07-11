@@ -663,6 +663,22 @@ final class AppModel: ObservableObject {
         NCMConverterCore.findFFmpeg() == nil ? "未检测到 ffmpeg" : "ffmpeg 可用"
     }
 
+    var queuedCount: Int {
+        items.filter { $0.status == .queued }.count
+    }
+
+    var runningCount: Int {
+        items.filter { $0.status == .running }.count
+    }
+
+    var finishedCount: Int {
+        items.filter { $0.status == .finished }.count
+    }
+
+    var failedCount: Int {
+        items.filter { $0.status == .failed }.count
+    }
+
     func chooseFiles() {
         let panel = NSOpenPanel()
         panel.title = "选择 NCM 文件"
@@ -872,154 +888,384 @@ final class AppModel: ObservableObject {
     }
 }
 
+enum GlassTheme {
+    static let radius: CGFloat = 24
+}
+
+extension View {
+    @ViewBuilder
+    func liquidPanel(cornerRadius: CGFloat = GlassTheme.radius, interactive: Bool = false) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        if #available(macOS 26.0, *) {
+            self
+                .glassEffect(.regular.interactive(interactive), in: shape)
+                .overlay {
+                    shape.stroke(.white.opacity(0.24), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.10), radius: 18, x: 0, y: 10)
+        } else {
+            self
+                .background(.ultraThinMaterial, in: shape)
+                .overlay {
+                    shape.stroke(.white.opacity(0.22), lineWidth: 1)
+                }
+                .shadow(color: .black.opacity(0.12), radius: 18, x: 0, y: 10)
+        }
+    }
+
+    @ViewBuilder
+    func liquidButton(prominent: Bool = false) -> some View {
+        if #available(macOS 26.0, *) {
+            if prominent {
+                self.buttonStyle(.glassProminent)
+            } else {
+                self.buttonStyle(.glass)
+            }
+        } else {
+            if prominent {
+                self.buttonStyle(.borderedProminent)
+            } else {
+                self.buttonStyle(.bordered)
+            }
+        }
+    }
+}
+
+struct LiquidBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack {
+            Color(nsColor: .windowBackgroundColor)
+
+            LinearGradient(
+                colors: backgroundColors,
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .opacity(colorScheme == .dark ? 0.48 : 0.74)
+
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.white.opacity(colorScheme == .dark ? 0.05 : 0.18))
+                    .frame(height: 92)
+                Spacer()
+                Rectangle()
+                    .fill(Color.black.opacity(colorScheme == .dark ? 0.20 : 0.04))
+                    .frame(height: 1)
+            }
+
+            GeometryReader { proxy in
+                Path { path in
+                    let width = proxy.size.width
+                    let height = proxy.size.height
+                    path.move(to: CGPoint(x: 0, y: height * 0.18))
+                    path.addCurve(
+                        to: CGPoint(x: width, y: height * 0.12),
+                        control1: CGPoint(x: width * 0.32, y: height * 0.02),
+                        control2: CGPoint(x: width * 0.70, y: height * 0.30)
+                    )
+                    path.addLine(to: CGPoint(x: width, y: height * 0.18))
+                    path.addCurve(
+                        to: CGPoint(x: 0, y: height * 0.24),
+                        control1: CGPoint(x: width * 0.66, y: height * 0.36),
+                        control2: CGPoint(x: width * 0.30, y: height * 0.08)
+                    )
+                    path.closeSubpath()
+                }
+                .fill(Color.white.opacity(colorScheme == .dark ? 0.05 : 0.23))
+            }
+        }
+        .ignoresSafeArea()
+    }
+
+    private var backgroundColors: [Color] {
+        if colorScheme == .dark {
+            return [
+                Color(red: 0.08, green: 0.12, blue: 0.16),
+                Color(red: 0.05, green: 0.20, blue: 0.22),
+                Color(red: 0.16, green: 0.13, blue: 0.19),
+                Color(red: 0.07, green: 0.08, blue: 0.10)
+            ]
+        }
+        return [
+            Color(red: 0.93, green: 0.98, blue: 1.00),
+            Color(red: 0.92, green: 0.96, blue: 0.91),
+            Color(red: 0.99, green: 0.95, blue: 0.89),
+            Color(red: 0.96, green: 0.97, blue: 1.00)
+        ]
+    }
+}
+
+struct AppMark: View {
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.78),
+                            Color.teal.opacity(0.18)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                        .stroke(.white.opacity(0.34), lineWidth: 1)
+                }
+
+            Circle()
+                .fill(Color.white.opacity(0.74))
+                .frame(width: size * 0.58, height: size * 0.58)
+                .overlay {
+                    Circle()
+                        .stroke(Color.cyan.opacity(0.30), lineWidth: size * 0.035)
+                }
+
+            Image(systemName: "music.note")
+                .font(.system(size: size * 0.34, weight: .bold))
+                .foregroundStyle(Color(red: 0.05, green: 0.18, blue: 0.22))
+                .offset(x: -size * 0.02, y: -size * 0.02)
+
+            Image(systemName: "arrow.triangle.2.circlepath")
+                .font(.system(size: size * 0.20, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(size * 0.09)
+                .background(Color.teal, in: Circle())
+                .offset(x: size * 0.28, y: size * 0.27)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+struct StatusPill: View {
+    let title: String
+    let value: String
+    let systemImage: String
+    var color: Color = .accentColor
+
+    var body: some View {
+        HStack(spacing: 9) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.callout.weight(.semibold))
+                    .monospacedDigit()
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .background(Color.primary.opacity(0.045), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+}
+
+struct SectionTitle: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        Label(title, systemImage: systemImage)
+            .font(.headline.weight(.semibold))
+            .foregroundStyle(.primary)
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            toolbar
-            Divider()
-            mainContent
-            Divider()
-            footer
+        ZStack {
+            LiquidBackground()
+
+            VStack(spacing: 14) {
+                header
+                actionBar
+                mainContent
+                footer
+            }
+            .padding(18)
         }
-        .frame(minWidth: 920, minHeight: 620)
+        .frame(minWidth: 1020, minHeight: 700)
         .onDrop(of: [UTType.fileURL.identifier], isTargeted: $model.isDropTargeted) { providers in
             handleDrop(providers: providers)
         }
         .overlay {
             if model.isDropTargeted {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.accentColor, lineWidth: 3)
-                    .padding(8)
+                dropOverlay
             }
         }
     }
 
     private var header: some View {
-        HStack(spacing: 12) {
-            Label("NCM 批量转 MP3", systemImage: "music.note.list")
-                .font(.title3.weight(.semibold))
-            Spacer()
-            Label(model.ffmpegStatusText, systemImage: model.ffmpegStatusText.contains("未") ? "exclamationmark.triangle" : "checkmark.circle")
-                .font(.callout)
-                .foregroundStyle(model.ffmpegStatusText.contains("未") ? .orange : .green)
+        HStack(spacing: 16) {
+            AppMark(size: 68)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("NCM 批量转 MP3")
+                    .font(.system(size: 25, weight: .bold, design: .rounded))
+                Text("批量解开网易云 NCM，自动识别 MP3 / FLAC，并用内置 ffmpeg 转成可播放 MP3。")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 16)
+
+            StatusPill(title: "队列", value: "\(model.items.count)", systemImage: "tray.full", color: .blue)
+            StatusPill(title: "完成", value: "\(model.finishedCount)", systemImage: "checkmark.circle.fill", color: .green)
+            StatusPill(
+                title: "ffmpeg",
+                value: model.ffmpegStatusText.contains("未") ? "缺失" : "可用",
+                systemImage: model.ffmpegStatusText.contains("未") ? "exclamationmark.triangle.fill" : "waveform.circle.fill",
+                color: model.ffmpegStatusText.contains("未") ? .orange : .teal
+            )
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 8)
     }
 
-    private var toolbar: some View {
+    private var actionBar: some View {
         HStack(spacing: 10) {
             Button(action: model.chooseFiles) {
                 Label("添加文件", systemImage: "plus")
+                    .labelStyle(.titleAndIcon)
             }
+            .liquidButton()
             .help("添加 .ncm 文件")
 
             Button(action: model.chooseFolder) {
                 Label("添加文件夹", systemImage: "folder.badge.plus")
+                    .labelStyle(.titleAndIcon)
             }
+            .liquidButton()
             .help("扫描文件夹里的 .ncm 文件")
 
             Button(action: model.removeSelected) {
                 Label("移除", systemImage: "minus")
+                    .labelStyle(.titleAndIcon)
             }
+            .liquidButton()
             .disabled(model.selection.isEmpty || model.isConverting)
             .help("移除选中的文件")
 
             Button(action: model.clearQueue) {
                 Label("清空", systemImage: "trash")
+                    .labelStyle(.titleAndIcon)
             }
+            .liquidButton()
             .disabled(model.items.isEmpty || model.isConverting)
             .help("清空列表")
 
             Spacer()
 
             Button(action: model.openOutputDirectory) {
-                Label("打开输出目录", systemImage: "folder")
+                Label("输出目录", systemImage: "folder")
+                    .labelStyle(.titleAndIcon)
             }
+            .liquidButton()
             .help("在 Finder 中打开输出目录")
 
             if model.isConverting {
                 Button(action: model.cancelConversion) {
                     Label("取消", systemImage: "stop.fill")
+                        .labelStyle(.titleAndIcon)
                 }
+                .liquidButton(prominent: true)
             } else {
                 Button(action: model.startConversion) {
                     Label("开始转换", systemImage: "play.fill")
+                        .labelStyle(.titleAndIcon)
                 }
                 .keyboardShortcut(.return, modifiers: .command)
+                .liquidButton(prominent: true)
                 .disabled(model.items.isEmpty)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .controlSize(.large)
+        .padding(12)
+        .liquidPanel(cornerRadius: 24)
     }
 
     private var mainContent: some View {
-        HSplitView {
-            queueList
-                .frame(minWidth: 520)
-            sidePanel
-                .frame(minWidth: 320, idealWidth: 360, maxWidth: 430)
+        HStack(spacing: 14) {
+            queuePanel
+                .frame(minWidth: 580, maxWidth: .infinity, maxHeight: .infinity)
+            inspectorPanel
+                .frame(width: 370)
+                .frame(maxHeight: .infinity)
         }
     }
 
-    private var queueList: some View {
-        VStack(spacing: 0) {
+    private var queuePanel: some View {
+        VStack(spacing: 12) {
+            HStack {
+                SectionTitle(title: "转换队列", systemImage: "music.note.list")
+                Spacer()
+                Text("\(model.queuedCount) 等待 / \(model.runningCount) 运行 / \(model.failedCount) 失败")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
+
             if model.items.isEmpty {
-                VStack(spacing: 14) {
-                    Image(systemName: "square.and.arrow.down")
-                        .font(.system(size: 42))
-                        .foregroundStyle(.secondary)
-                    Text("拖入 .ncm 文件或文件夹")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                EmptyQueueView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List(selection: $model.selection) {
                     ForEach(model.items) { item in
                         QueueRow(item: item)
                             .tag(item.id)
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
                     }
                 }
                 .listStyle(.inset)
+                .scrollContentBackground(.hidden)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
+        .padding(14)
+        .liquidPanel(cornerRadius: 26)
     }
 
-    private var sidePanel: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("输出目录")
-                    .font(.headline)
-                HStack {
+    private var inspectorPanel: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 9) {
+                SectionTitle(title: "输出", systemImage: "square.and.arrow.down")
+                HStack(spacing: 8) {
                     TextField("输出目录", text: Binding(
                         get: { model.outputDirectory.path },
                         set: { model.outputDirectory = URL(fileURLWithPath: $0, isDirectory: true) }
                     ))
+                    .textFieldStyle(.roundedBorder)
+
                     Button(action: model.chooseOutputDirectory) {
                         Image(systemName: "folder.badge.gearshape")
                     }
+                    .liquidButton()
                     .help("选择输出目录")
                 }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Text("格式")
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 9) {
+                SectionTitle(title: "转换偏好", systemImage: "slider.horizontal.3")
                 Picker("格式", selection: $model.outputMode) {
                     ForEach(OutputMode.allCases) { mode in
                         Text(mode.title).tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
-            }
 
-            VStack(alignment: .leading, spacing: 8) {
                 Toggle("用歌曲信息命名", isOn: $model.renameByMetadata)
                 Toggle("覆盖同名文件", isOn: $model.overwriteExisting)
                 Toggle("递归扫描文件夹", isOn: $model.recursiveFolderSearch)
@@ -1027,24 +1273,42 @@ struct ContentView: View {
 
             Divider()
 
-            Text("日志")
-                .font(.headline)
+            SectionTitle(title: "日志", systemImage: "text.alignleft")
             LogView(lines: model.logLines)
         }
-        .padding(16)
+        .padding(14)
+        .liquidPanel(cornerRadius: 26)
     }
 
     private var footer: some View {
         HStack(spacing: 12) {
             ProgressView(value: model.progressFraction)
+                .tint(.teal)
                 .frame(maxWidth: .infinity)
+
             Text("\(model.completedCount)/\(model.items.count)")
-                .monospacedDigit()
+                .font(.callout.monospacedDigit())
                 .foregroundStyle(.secondary)
-                .frame(width: 70, alignment: .trailing)
+                .frame(width: 76, alignment: .trailing)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 4)
+    }
+
+    private var dropOverlay: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "arrow.down.doc.fill")
+                .font(.system(size: 38, weight: .semibold))
+                .foregroundStyle(.teal)
+            Text("松开即可添加 NCM 文件")
+                .font(.headline)
+            Text("支持文件夹拖入与递归扫描")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 42)
+        .padding(.vertical, 30)
+        .liquidPanel(cornerRadius: 28, interactive: true)
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
@@ -1072,17 +1336,43 @@ struct ContentView: View {
     }
 }
 
+struct EmptyQueueView: View {
+    var body: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.thinMaterial)
+                    .frame(width: 112, height: 112)
+                Image(systemName: "square.and.arrow.down.on.square")
+                    .font(.system(size: 44, weight: .semibold))
+                    .foregroundStyle(.teal)
+            }
+            .liquidPanel(cornerRadius: 26)
+
+            Text("拖入 .ncm 文件或文件夹")
+                .font(.title3.weight(.semibold))
+            Text("也可以用上方按钮添加，队列会自动去重。")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 struct QueueRow: View {
     let item: QueueItem
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 12) {
             Image(systemName: item.status.systemImage)
+                .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(item.status.color)
-                .frame(width: 22)
+                .frame(width: 26, height: 26)
+                .background(item.status.color.opacity(0.12), in: Circle())
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(item.url.lastPathComponent)
+                    .font(.callout.weight(.medium))
                     .lineLimit(1)
                 Text(item.outputURL?.path ?? item.url.deletingLastPathComponent().path)
                     .font(.caption)
@@ -1096,9 +1386,12 @@ struct QueueRow: View {
                 .font(.caption)
                 .foregroundStyle(item.status == .failed ? .red : .secondary)
                 .lineLimit(2)
-                .frame(maxWidth: 220, alignment: .trailing)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: 230, alignment: .trailing)
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -1108,7 +1401,12 @@ struct LogView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 5) {
+                    if lines.isEmpty {
+                        Text("等待转换任务...")
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
                     ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
                         Text(line)
                             .font(.system(size: 11, design: .monospaced))
@@ -1118,11 +1416,14 @@ struct LogView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(8)
+                .padding(10)
             }
-            .background(Color(nsColor: .textBackgroundColor))
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .onChange(of: lines.count) { count in
+            .background(Color(nsColor: .textBackgroundColor).opacity(0.62), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+            }
+            .onChange(of: lines.count) { _, count in
                 guard count > 0 else { return }
                 proxy.scrollTo(count - 1, anchor: .bottom)
             }
