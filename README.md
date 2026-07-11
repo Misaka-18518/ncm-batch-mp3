@@ -21,12 +21,12 @@
 
 ## 下载
 
-当前仓库包含已经打包好的 macOS App，新版 Release 也会提供 Windows 安装器：
+Release 会提供 macOS 常见拖拽安装 DMG 和 Windows 安装器：
 
-- `dist/NCM批量转MP3-SwiftUI.app.zip`
-- `NCM-Batch-MP3-Setup-1.1.0-x64.exe`
+- `NCM批量转MP3-1.1.1-macOS-arm64.dmg`
+- `NCM-Batch-MP3-Setup-1.1.1-x64.exe`
 
-解压后双击 `NCM批量转MP3.app` 即可。
+macOS 打开 DMG 后，把 `NCM批量转MP3.app` 拖到 `Applications` 即可。
 
 如果 macOS 提示无法打开，可以右键 App 选择“打开”，或在终端执行：
 
@@ -56,6 +56,7 @@ xattr -cr NCM批量转MP3.app
 
 ```bash
 ./scripts/build_app.sh
+./scripts/build_dmg.sh
 ```
 
 构建产物会输出到：
@@ -63,6 +64,7 @@ xattr -cr NCM批量转MP3.app
 ```text
 dist/NCM批量转MP3.app
 dist/NCM批量转MP3-SwiftUI.app.zip
+dist/NCM批量转MP3-1.1.1-macOS-arm64.dmg
 ```
 
 构建脚本会优先使用已经存在的 `Resources/ffmpeg`。如果不存在，会尝试从 OSXExperts 下载 Apple Silicon ffmpeg 8.1。
@@ -78,7 +80,7 @@ Windows 版源码在 `windows/`，使用 Electron 和 electron-builder 生成 x6
 构建产物会输出到：
 
 ```text
-dist/windows/NCM-Batch-MP3-Setup-1.1.0-x64.exe
+dist/windows/NCM-Batch-MP3-Setup-1.1.1-x64.exe
 ```
 
 构建脚本会从 `@ffmpeg-installer/win32-x64` 复制 `ffmpeg.exe` 到安装器资源中。
