@@ -10,3 +10,7 @@ Resources/ffmpeg*.zip
 dist/*.app/
 dist/*.tar.gz
 !dist/NCM批量转MP3-SwiftUI.app.zip
+tests/__pycache__/
+windows/node_modules/
+windows/resources/win/ffmpeg.exe
+dist/windows/

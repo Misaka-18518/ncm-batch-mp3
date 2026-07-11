@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NCM 批量转 MP3</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="titlebar">
+        <div class="window-title">
+          <div class="app-logo" aria-hidden="true">
+            <span class="logo-note">♪</span>
+          </div>
+          <div>
+            <strong>NCM 批量转 MP3</strong>
+            <span>Windows 版 1.1.0</span>
+          </div>
+        </div>
+        <div class="window-controls">
+          <button class="window-button" id="minimizeButton" aria-label="最小化">−</button>
+          <button class="window-button" id="maximizeButton" aria-label="最大化">□</button>
+          <button class="window-button close" id="closeButton" aria-label="关闭">×</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <aside class="sidebar">
+          <div class="brand-card">
+            <div class="brand-icon">N</div>
+            <div>
+              <h1>NCM 转换器</h1>
+              <p>批量导入，自动解密，输出可播放 MP3。</p>
+            </div>
+          </div>
+
+          <div class="stat-stack">
+            <div class="stat-card">
+              <span>队列</span>
+              <strong id="queuedStat">0</strong>
+            </div>
+            <div class="stat-card success">
+              <span>完成</span>
+              <strong id="finishedStat">0</strong>
+            </div>
+            <div class="stat-card warn">
+              <span>失败</span>
+              <strong id="failedStat">0</strong>
+            </div>
+          </div>
+
+          <div class="side-status" id="ffmpegStatus">检测 ffmpeg...</div>
+        </aside>
+
+        <main class="workspace">
+          <section class="command-bar" aria-label="操作">
+            <div class="command-group">
+              <button class="command primary-light" id="addFilesButton">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                <span>添加文件</span>
+              </button>
+              <button class="command" id="addFolderButton">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5h7l2 2h9v8.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M15 14h4M17 12v4"/></svg>
+                <span>添加文件夹</span>
+              </button>
+              <button class="command ghost" id="removeButton">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>
+                <span>移除</span>
+              </button>
+              <button class="command ghost" id="clearButton">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="m9 7 .7-2h4.6L15 7"/><path d="M6 7l1 13h10l1-13"/></svg>
+                <span>清空</span>
+              </button>
+            </div>
+            <div class="command-group">
+              <button class="command" id="openOutputButton">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h7l2 2h9v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+                <span>输出目录</span>
+              </button>
+              <button class="command accent" id="startButton">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7Z"/></svg>
+                <span>开始转换</span>
+              </button>
+              <button class="command danger hidden" id="cancelButton">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/></svg>
+                <span>取消</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="main-grid">
+            <section class="queue-panel panel" id="dropSurface">
+              <div class="panel-heading">
+                <div>
+                  <h2>转换队列</h2>
+                  <p id="queueHint">拖入 .ncm 文件或文件夹，队列会自动去重。</p>
+                </div>
+                <span class="counter" id="queueCounter">0 个文件</span>
+              </div>
+
+              <div class="drop-zone" id="dropZone">
+                <div class="drop-icon">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 19h14"/></svg>
+                </div>
+                <h3>拖拽 NCM 文件到这里</h3>
+                <p>支持单文件、多个文件和文件夹递归扫描。</p>
+              </div>
+
+              <div class="queue-list hidden" id="queueList" role="list"></div>
+            </section>
+
+            <aside class="settings-panel panel">
+              <div class="panel-heading compact">
+                <div>
+                  <h2>输出设置</h2>
+                  <p>转换完成后会写入所选目录。</p>
+                </div>
+              </div>
+
+              <label class="field">
+                <span>输出目录</span>
+                <div class="path-row">
+                  <input id="outputDirectoryInput" type="text" spellcheck="false">
+                  <button class="icon-button" id="chooseOutputButton" aria-label="选择输出目录">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h7l2 2h9v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M16 14h4M18 12v4"/></svg>
+                  </button>
+                </div>
+              </label>
+
+              <div class="field">
+                <span>格式</span>
+                <div class="segmented">
+                  <button class="segment selected" data-mode="mp3">优先 MP3</button>
+                  <button class="segment" data-mode="original">原始格式</button>
+                </div>
+              </div>
+
+              <label class="check-row">
+                <input id="renameToggle" type="checkbox" checked>
+                <span>用歌曲信息命名</span>
+              </label>
+              <label class="check-row">
+                <input id="overwriteToggle" type="checkbox">
+                <span>覆盖同名文件</span>
+              </label>
+              <label class="check-row">
+                <input id="recursiveToggle" type="checkbox" checked>
+                <span>递归扫描文件夹</span>
+              </label>
+
+              <div class="log-panel">
+                <div class="log-heading">
+                  <h2>日志</h2>
+                  <span id="progressText">0/0</span>
+                </div>
+                <div class="progress-track">
+                  <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="log-list" id="logList">
+                  <p class="muted">等待转换任务...</p>
+                </div>
+              </div>
+            </aside>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <button class="easter-dot" id="easterDot" tabindex="-1"></button>
+    <div class="easter-overlay hidden" id="easterOverlay">
+      <div class="easter-card">
+        <button class="easter-close" id="easterClose">×</button>
+        <p>Eric呈上！</p>
+        <strong id="easterDays">Eric与Eva认识893天！</strong>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

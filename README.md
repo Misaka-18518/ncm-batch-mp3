@@ -1,12 +1,13 @@
 # NCM 批量转 MP3
 
-一个原生 macOS SwiftUI 小工具，用来批量把网易云音乐 `.ncm` 文件转换为可播放的音频文件，并在需要时通过内置 ffmpeg 转成 MP3。
+一个 macOS / Windows 桌面小工具，用来批量把网易云音乐 `.ncm` 文件转换为可播放的音频文件，并在需要时通过内置 ffmpeg 转成 MP3。
 
 > 本人真的很想在玩GTAV时听自己喜欢的歌，但由于网易云的雷霆格式，网上的转换器又不太好用，干脆自己做一个来。自己动手，丰衣足食！
 
 ## 功能
 
-- 原生 SwiftUI 界面
+- macOS 原生 SwiftUI 界面
+- Windows 版现代白色桌面 UI，提供 NSIS 安装器
 - 批量添加 `.ncm` 文件
 - 文件夹递归扫描
 - 拖拽导入
@@ -15,14 +16,15 @@
 - 同名文件覆盖开关
 - 优先输出 MP3 / 保留原始格式
 - 队列状态、进度条、日志
-- 内置 Apple Silicon ffmpeg 8.1，无需用户另装 ffmpeg
+- macOS 版内置 Apple Silicon ffmpeg 8.1，Windows 版内置 x64 ffmpeg，无需用户另装 ffmpeg
 - macOS 15.0+ deployment target，面向 macOS 15-27 做兼容；macOS 26+ 在拖拽区和操作区使用系统玻璃效果，旧系统自动降级为兼容材质
 
 ## 下载
 
-当前仓库包含一个已经打包好的 App：
+当前仓库包含已经打包好的 macOS App，新版 Release 也会提供 Windows 安装器：
 
 - `dist/NCM批量转MP3-SwiftUI.app.zip`
+- `NCM-Batch-MP3-Setup-1.1.0-x64.exe`
 
 解压后双击 `NCM批量转MP3.app` 即可。
 
@@ -48,6 +50,8 @@ xattr -cr NCM批量转MP3.app
 
 ## 从源码构建
 
+### macOS
+
 需要 macOS、Command Line Tools 或 Xcode。
 
 ```bash
@@ -62,6 +66,22 @@ dist/NCM批量转MP3-SwiftUI.app.zip
 ```
 
 构建脚本会优先使用已经存在的 `Resources/ffmpeg`。如果不存在，会尝试从 OSXExperts 下载 Apple Silicon ffmpeg 8.1。
+
+### Windows
+
+Windows 版源码在 `windows/`，使用 Electron 和 electron-builder 生成 x64 NSIS 安装器：
+
+```bash
+./scripts/build_windows.sh
+```
+
+构建产物会输出到：
+
+```text
+dist/windows/NCM-Batch-MP3-Setup-1.1.0-x64.exe
+```
+
+构建脚本会从 `@ffmpeg-installer/win32-x64` 复制 `ffmpeg.exe` 到安装器资源中。
 
 ## 测试
 
@@ -84,6 +104,8 @@ dist/NCM批量转MP3-SwiftUI.app.zip
 - 签进 App 后 SHA256 会变化，详见 `Resources/FFMPEG_NOTICE.txt`
 
 该 ffmpeg 构建启用了 `--enable-gpl`。本项目采用 GPLv3-or-later 发布。
+
+Windows 版内置 `@ffmpeg-installer/win32-x64` 提供的 `ffmpeg.exe`，详见 `windows/resources/FFMPEG_WINDOWS_NOTICE.txt`。
 
 ## 免责声明
 
