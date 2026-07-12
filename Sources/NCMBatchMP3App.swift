@@ -1257,9 +1257,9 @@ struct ContentView: View {
             Button {
                 model.isEasterEggPresented = true
             } label: {
-                Circle()
-                    .fill(.black)
-                    .frame(width: 7, height: 7)
+                Text("🧡")
+                    .font(.system(size: 15))
+                    .frame(width: 18, height: 18)
             }
             .buttonStyle(.plain)
             .padding(10)
