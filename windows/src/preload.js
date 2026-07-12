@@ -8,6 +8,7 @@ function on(channel, callback) {
 
 contextBridge.exposeInMainWorld("ncmBridge", {
   getDefaults: () => ipcRenderer.invoke("app:getDefaults"),
+  checkForUpdates: manual => ipcRenderer.invoke("app:checkForUpdates", { manual: Boolean(manual) }),
   chooseFiles: () => ipcRenderer.invoke("dialog:chooseFiles"),
   chooseFolder: recursive => ipcRenderer.invoke("dialog:chooseFolder", recursive),
   chooseOutputDirectory: () => ipcRenderer.invoke("dialog:chooseOutputDirectory"),

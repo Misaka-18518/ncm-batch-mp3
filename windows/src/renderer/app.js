@@ -5,6 +5,7 @@ const mockBridge = {
       ffmpegAvailable: true
     };
   },
+  async checkForUpdates() { return { updateAvailable: false }; },
   async chooseFiles() { return []; },
   async chooseFolder() { return []; },
   async chooseOutputDirectory() { return null; },
@@ -59,6 +60,7 @@ const elements = {
   chooseOutputButton: $("#chooseOutputButton"),
   startButton: $("#startButton"),
   cancelButton: $("#cancelButton"),
+  checkUpdateButton: $("#checkUpdateButton"),
   segments: Array.from(document.querySelectorAll(".segment")),
   easterDot: $("#easterDot"),
   easterOverlay: $("#easterOverlay"),
@@ -90,14 +92,8 @@ function statusSymbol(status) {
   return "♪";
 }
 
-function ericEvaDays(now = new Date()) {
-  const base = Date.UTC(2024, 0, 30);
-  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-  return Math.floor((today - base) / 86400000);
-}
-
 function showEasterEgg() {
-  elements.easterDays.textContent = `Eric与Eva认识${ericEvaDays()}天！`;
+  elements.easterDays.textContent = window.NCMEasterEgg.message();
   elements.easterOverlay.classList.remove("hidden");
 }
 
@@ -331,6 +327,7 @@ function wireEvents() {
   $("#minimizeButton").addEventListener("click", () => bridge.minimize());
   $("#maximizeButton").addEventListener("click", () => bridge.maximize());
   $("#closeButton").addEventListener("click", () => bridge.close());
+  elements.checkUpdateButton.addEventListener("click", () => bridge.checkForUpdates(true));
 
   elements.addFilesButton.addEventListener("click", chooseFiles);
   elements.addFolderButton.addEventListener("click", chooseFolder);

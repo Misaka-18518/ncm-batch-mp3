@@ -632,6 +632,109 @@ final class CancellationToken: @unchecked Sendable {
     }
 }
 
+struct UpdatePrompt: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+    let downloadURL: URL?
+}
+
+enum ReleaseUpdateChecker {
+    private static let latestReleaseURL = URL(string: "https://api.github.com/repos/enshuwu46-png/ncm-batch-mp3/releases/latest")!
+    private static let expectedReleasePrefix = "/enshuwu46-png/ncm-batch-mp3/releases/tag/"
+
+    private struct LatestRelease: Decodable {
+        let tagName: String
+        let htmlURL: URL
+
+        enum CodingKeys: String, CodingKey {
+            case tagName = "tag_name"
+            case htmlURL = "html_url"
+        }
+    }
+
+    static func fetchUpdate(currentVersion: String) async throws -> UpdatePrompt? {
+        var request = URLRequest(url: latestReleaseURL)
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("NCM-Batch-MP3", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 7
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw URLError(.badServerResponse)
+        }
+
+        let release = try JSONDecoder().decode(LatestRelease.self, from: data)
+        guard isNewerVersion(release.tagName, than: currentVersion) else {
+            return nil
+        }
+        guard isOfficialReleaseURL(release.htmlURL, tagName: release.tagName) else {
+            throw URLError(.badURL)
+        }
+
+        return UpdatePrompt(
+            title: "发现新版本",
+            message: "NCM 批量转 MP3 \(release.tagName) 已发布。前往 GitHub Release 下载最新版。",
+            downloadURL: release.htmlURL
+        )
+    }
+
+    static func isNewerVersion(_ latest: String, than current: String) -> Bool {
+        guard let latestParts = versionParts(latest), let currentParts = versionParts(current) else {
+            return false
+        }
+
+        for index in 0..<max(latestParts.count, currentParts.count) {
+            let newest = index < latestParts.count ? latestParts[index] : 0
+            let installed = index < currentParts.count ? currentParts[index] : 0
+            if newest != installed {
+                return newest > installed
+            }
+        }
+        return false
+    }
+
+    private static func versionParts(_ version: String) -> [Int]? {
+        let normalized = version
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "v", with: "", options: [.anchored, .caseInsensitive])
+            .split(whereSeparator: { $0 == "-" || $0 == "+" })
+            .first
+            .map(String.init) ?? ""
+        let parts = normalized.split(separator: ".", omittingEmptySubsequences: false)
+        guard (1...3).contains(parts.count), parts.allSatisfy({ $0.allSatisfy(\.isNumber) }) else {
+            return nil
+        }
+        return parts.compactMap { Int($0) }
+    }
+
+    private static func isOfficialReleaseURL(_ url: URL, tagName: String) -> Bool {
+        guard let encodedTagName = tagName.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) else {
+            return false
+        }
+        return url.scheme == "https"
+            && url.host == "github.com"
+            && url.path == expectedReleasePrefix + encodedTagName
+    }
+}
+
+enum EricEvaEasterEgg {
+    static func daysTogether(on date: Date = Date(), calendar: Calendar = .current) -> Int {
+        guard let start = calendar.date(from: DateComponents(year: 2024, month: 1, day: 30)) else {
+            return 0
+        }
+        return calendar.dateComponents(
+            [.day],
+            from: calendar.startOfDay(for: start),
+            to: calendar.startOfDay(for: date)
+        ).day ?? 0
+    }
+
+    static func message(on date: Date = Date()) -> String {
+        "谨以此app，纪念Eric与Eva认识\(daysTogether(on: date))天！"
+    }
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published var items: [QueueItem] = []
@@ -645,8 +748,12 @@ final class AppModel: ObservableObject {
     @Published var completedCount = 0
     @Published var logLines: [String] = []
     @Published var isDropTargeted = false
+    @Published var updatePrompt: UpdatePrompt?
+    @Published var isEasterEggPresented = false
 
     private var currentToken: CancellationToken?
+    private var updateCheckInProgress = false
+    private var automaticUpdateCheckFinished = false
 
     init() {
         let music = FileManager.default.urls(for: .musicDirectory, in: .userDomainMask).first
@@ -677,6 +784,48 @@ final class AppModel: ObservableObject {
 
     var failedCount: Int {
         items.filter { $0.status == .failed }.count
+    }
+
+    var easterEggMessage: String {
+        EricEvaEasterEgg.message()
+    }
+
+    func checkForUpdates(manual: Bool = false) {
+        guard !updateCheckInProgress, manual || !automaticUpdateCheckFinished else { return }
+        if !manual {
+            automaticUpdateCheckFinished = true
+        }
+        updateCheckInProgress = true
+        let currentVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+
+        Task { [weak self] in
+            do {
+                let prompt = try await ReleaseUpdateChecker.fetchUpdate(currentVersion: currentVersion)
+                guard let self else { return }
+                self.updateCheckInProgress = false
+                if let prompt {
+                    self.updatePrompt = prompt
+                } else if manual {
+                    self.updatePrompt = UpdatePrompt(title: "检查更新", message: "当前已是最新版本。", downloadURL: nil)
+                }
+            } catch {
+                guard let self else { return }
+                self.updateCheckInProgress = false
+                if manual {
+                    self.updatePrompt = UpdatePrompt(title: "检查更新失败", message: "暂时无法检查更新，请稍后再试。", downloadURL: nil)
+                }
+            }
+        }
+    }
+
+    func dismissUpdatePrompt() {
+        updatePrompt = nil
+    }
+
+    func openUpdateDownload() {
+        guard let url = updatePrompt?.downloadURL else { return }
+        NSWorkspace.shared.open(url)
+        dismissUpdatePrompt()
     }
 
     func chooseFiles() {
@@ -1104,6 +1253,45 @@ struct ContentView: View {
                 dropOverlay
             }
         }
+        .overlay(alignment: .bottomLeading) {
+            Button {
+                model.isEasterEggPresented = true
+            } label: {
+                Circle()
+                    .fill(.black)
+                    .frame(width: 7, height: 7)
+            }
+            .buttonStyle(.plain)
+            .padding(10)
+            .accessibilityHidden(true)
+        }
+        .overlay {
+            if model.isEasterEggPresented {
+                easterEggOverlay
+            }
+        }
+        .task {
+            model.checkForUpdates()
+        }
+        .alert(model.updatePrompt?.title ?? "", isPresented: Binding(
+            get: { model.updatePrompt != nil },
+            set: { presented in
+                if !presented {
+                    model.dismissUpdatePrompt()
+                }
+            }
+        )) {
+            if model.updatePrompt?.downloadURL != nil {
+                Button("前往下载") {
+                    model.openUpdateDownload()
+                }
+            }
+            Button(model.updatePrompt?.downloadURL == nil ? "好" : "稍后", role: .cancel) {
+                model.dismissUpdatePrompt()
+            }
+        } message: {
+            Text(model.updatePrompt?.message ?? "")
+        }
     }
 
     private var header: some View {
@@ -1120,6 +1308,14 @@ struct ContentView: View {
             }
 
             Spacer(minLength: 16)
+
+            Button {
+                model.checkForUpdates(manual: true)
+            } label: {
+                Image(systemName: "arrow.triangle.2.circlepath")
+            }
+            .liquidButton()
+            .help("检查更新")
 
             StatusPill(title: "队列", value: "\(model.items.count)", systemImage: "tray.full", color: .blue)
             StatusPill(title: "完成", value: "\(model.finishedCount)", systemImage: "checkmark.circle.fill", color: .green)
@@ -1309,6 +1505,42 @@ struct ContentView: View {
         .padding(.horizontal, 42)
         .padding(.vertical, 30)
         .liquidPanel(cornerRadius: 28, interactive: true)
+    }
+
+    private var easterEggOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.18)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    model.isEasterEggPresented = false
+                }
+
+            VStack(spacing: 10) {
+                Text(model.easterEggMessage)
+                    .font(.title3.weight(.semibold))
+                    .multilineTextAlignment(.center)
+                Text("我们是永远的最好的朋友！")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 38)
+            .padding(.vertical, 30)
+            .frame(maxWidth: 440)
+            .liquidPanel(cornerRadius: 16)
+            .overlay(alignment: .topTrailing) {
+                Button {
+                    model.isEasterEggPresented = false
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+                .padding(7)
+            }
+        }
+        .transition(.opacity)
     }
 
     private func handleDrop(providers: [NSItemProvider]) -> Bool {
@@ -1515,6 +1747,17 @@ enum CommandLineMode {
 
 enum SelfTest {
     static func run() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let day894 = calendar.date(from: DateComponents(year: 2026, month: 7, day: 12))!
+        guard EricEvaEasterEgg.daysTogether(on: day894, calendar: calendar) == 894 else {
+            throw NCMConversionError.output("彩蛋计时器日期计算异常")
+        }
+        guard ReleaseUpdateChecker.isNewerVersion("v1.1.2", than: "1.1.1"),
+              !ReleaseUpdateChecker.isNewerVersion("1.1.2", than: "1.1.2") else {
+            throw NCMConversionError.output("版本比较异常")
+        }
+
         let fileManager = FileManager.default
         let tempDirectory = fileManager.temporaryDirectory
             .appendingPathComponent("ncm-swift-selftest-\(UUID().uuidString)", isDirectory: true)

@@ -104,6 +104,20 @@ button {
   cursor: pointer;
 }
 
+.window-button.update {
+  width: 42px;
+}
+
+.window-button.update svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .window-button:hover {
   background: rgba(15, 23, 42, 0.08);
 }
@@ -624,7 +638,7 @@ input[type="checkbox"] {
 
 .easter-card {
   position: relative;
-  width: 360px;
+  width: 430px;
   padding: 28px;
   border-radius: 10px;
   border: 1px solid var(--stroke);
@@ -636,12 +650,13 @@ input[type="checkbox"] {
 .easter-card p {
   margin-bottom: 10px;
   font-size: 18px;
+  line-height: 1.55;
   color: var(--text);
 }
 
 .easter-card strong {
   display: block;
-  font-size: 20px;
+  font-size: 17px;
   line-height: 1.4;
 }
 

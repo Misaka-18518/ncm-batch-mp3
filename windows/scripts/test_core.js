@@ -5,6 +5,8 @@ const os = require("node:os");
 const crypto = require("node:crypto");
 const assert = require("node:assert/strict");
 const { buildKeyBox, convertNcmFile } = require("../src/shared/ncm-core");
+const { daysTogether, message: easterEggMessage } = require("../src/shared/easter-egg");
+const { isVersionNewer, officialReleaseURL } = require("../src/shared/update-core");
 
 const MAGIC = Buffer.from("CTENFDAM", "ascii");
 const CORE_KEY = Buffer.from("687A4852416D736F356B496E62617857", "hex");
@@ -70,6 +72,22 @@ async function buildNcm(filePath, audio, audioFormat, title = "Synthetic Track")
 }
 
 async function main() {
+  const julyTwelfth = new Date(2026, 6, 12, 12, 0, 0);
+  assert.equal(daysTogether(julyTwelfth), 894);
+  assert.equal(easterEggMessage(julyTwelfth), "谨以此app，纪念Eric与Eva认识894天！");
+
+  assert.equal(isVersionNewer("v1.1.2", "1.1.1"), true);
+  assert.equal(isVersionNewer("1.1.2", "1.1.2"), false);
+  assert.equal(isVersionNewer("1.1.1", "1.1.2"), false);
+  assert.equal(
+    officialReleaseURL({
+      tag_name: "v1.1.2",
+      html_url: "https://github.com/enshuwu46-png/ncm-batch-mp3/releases/tag/v1.1.2"
+    }),
+    "https://github.com/enshuwu46-png/ncm-batch-mp3/releases/tag/v1.1.2"
+  );
+  assert.equal(officialReleaseURL({ tag_name: "v1.1.2", html_url: "https://example.com/update" }), null);
+
   const expectedKeyBoxPrefix = [
     70, 218, 132, 64, 217, 166, 112, 195,
     68, 11, 211, 232, 95, 55, 88, 238,

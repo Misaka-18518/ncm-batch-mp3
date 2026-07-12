@@ -1,10 +1,13 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
+const https = require("node:https");
 const { app, BrowserWindow, dialog, ipcMain, shell } = require("electron");
 const { convertNcmFile, findFfmpeg } = require("./shared/ncm-core");
+const { LATEST_RELEASE_API, isVersionNewer, officialReleaseURL } = require("./shared/update-core");
 
 let mainWindow;
 let activeController = null;
+let updateCheckPromise = null;
 
 function defaultOutputDirectory() {
   return path.join(app.getPath("music"), "NCM 转换输出");
@@ -29,7 +32,115 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
-  mainWindow.once("ready-to-show", () => mainWindow.show());
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+    setTimeout(() => {
+      void checkForUpdates();
+    }, 1200);
+  });
+}
+
+function fetchLatestRelease() {
+  return new Promise((resolve, reject) => {
+    const request = https.get(LATEST_RELEASE_API, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        "User-Agent": "NCM-Batch-MP3"
+      }
+    }, response => {
+      if (response.statusCode !== 200) {
+        response.resume();
+        reject(new Error(`GitHub 返回 HTTP ${response.statusCode || "未知错误"}`));
+        return;
+      }
+
+      let body = "";
+      response.setEncoding("utf8");
+      response.on("data", chunk => {
+        body += chunk;
+      });
+      response.once("error", reject);
+      response.once("end", () => {
+        try {
+          resolve(JSON.parse(body));
+        } catch {
+          reject(new Error("GitHub 返回了无法识别的更新信息"));
+        }
+      });
+    });
+
+    request.setTimeout(7000, () => request.destroy(new Error("检查更新超时")));
+    request.once("error", reject);
+  });
+}
+
+async function showUpdateDialog(options) {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return { response: 1 };
+  }
+  return dialog.showMessageBox(mainWindow, options);
+}
+
+async function checkForUpdates({ manual = false } = {}) {
+  if (updateCheckPromise) {
+    return updateCheckPromise;
+  }
+
+  updateCheckPromise = (async () => {
+    try {
+      const release = await fetchLatestRelease();
+      const downloadURL = officialReleaseURL(release);
+      if (!downloadURL) {
+        throw new Error("更新下载地址不可信");
+      }
+
+      const currentVersion = app.getVersion();
+      if (isVersionNewer(release.tag_name, currentVersion)) {
+        const result = await showUpdateDialog({
+          type: "info",
+          title: "发现新版本",
+          message: `NCM 批量转 MP3 ${release.tag_name} 已发布。`,
+          detail: "前往 GitHub Release 下载最新版。",
+          buttons: ["前往下载", "稍后"],
+          defaultId: 0,
+          cancelId: 1,
+          noLink: true
+        });
+        if (result.response === 0) {
+          await shell.openExternal(downloadURL);
+        }
+        return { updateAvailable: true, version: release.tag_name };
+      }
+
+      if (manual) {
+        await showUpdateDialog({
+          type: "info",
+          title: "检查更新",
+          message: "当前已是最新版本。",
+          buttons: ["好"],
+          defaultId: 0,
+          noLink: true
+        });
+      }
+      return { updateAvailable: false, version: currentVersion };
+    } catch (error) {
+      if (manual) {
+        await showUpdateDialog({
+          type: "warning",
+          title: "检查更新失败",
+          message: "暂时无法检查更新，请稍后再试。",
+          buttons: ["好"],
+          defaultId: 0,
+          noLink: true
+        });
+      }
+      return { updateAvailable: false, error: error.message || String(error) };
+    } finally {
+      updateCheckPromise = null;
+    }
+  })();
+
+  return updateCheckPromise;
 }
 
 async function collectNcmFiles(inputPaths, recursive) {
@@ -100,6 +211,7 @@ ipcMain.handle("app:getDefaults", () => ({
   outputDirectory: defaultOutputDirectory(),
   ffmpegAvailable: Boolean(findFfmpeg(ffmpegCandidates()))
 }));
+ipcMain.handle("app:checkForUpdates", (_, options) => checkForUpdates({ manual: Boolean(options?.manual) }));
 
 ipcMain.handle("window:minimize", () => mainWindow?.minimize());
 ipcMain.handle("window:maximize", () => {

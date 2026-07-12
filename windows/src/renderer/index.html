@@ -15,10 +15,13 @@
           </div>
           <div>
             <strong>NCM 批量转 MP3</strong>
-            <span>Windows 版 1.1.1</span>
+            <span>Windows 版 1.1.2</span>
           </div>
         </div>
         <div class="window-controls">
+          <button class="window-button update" id="checkUpdateButton" aria-label="检查更新" title="检查更新">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0 2 5.5"/><path d="M20 4v7h-7"/></svg>
+          </button>
           <button class="window-button" id="minimizeButton" aria-label="最小化">−</button>
           <button class="window-button" id="maximizeButton" aria-label="最大化">□</button>
           <button class="window-button close" id="closeButton" aria-label="关闭">×</button>
@@ -171,11 +174,12 @@
     <div class="easter-overlay hidden" id="easterOverlay">
       <div class="easter-card">
         <button class="easter-close" id="easterClose">×</button>
-        <p>Eric呈上！</p>
-        <strong id="easterDays">Eric与Eva认识893天！</strong>
+        <p id="easterDays">谨以此app，纪念Eric与Eva认识894天！</p>
+        <strong>我们是永远的最好的朋友！</strong>
       </div>
     </div>
 
+    <script src="../shared/easter-egg.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
