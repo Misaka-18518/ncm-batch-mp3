@@ -76,17 +76,17 @@ async function main() {
   assert.equal(daysTogether(julyTwelfth), 894);
   assert.equal(easterEggMessage(julyTwelfth), "谨以此app，纪念Eric与Eva认识894天！");
 
-  assert.equal(isVersionNewer("v1.1.2", "1.1.1"), true);
-  assert.equal(isVersionNewer("1.1.2", "1.1.2"), false);
-  assert.equal(isVersionNewer("1.1.1", "1.1.2"), false);
+  assert.equal(isVersionNewer("v1.2.0", "1.1.2"), true);
+  assert.equal(isVersionNewer("1.2.0", "1.2.0"), false);
+  assert.equal(isVersionNewer("1.1.2", "1.2.0"), false);
   assert.equal(
     officialReleaseURL({
-      tag_name: "v1.1.2",
-      html_url: "https://github.com/enshuwu46-png/ncm-batch-mp3/releases/tag/v1.1.2"
+      tag_name: "v1.2.0",
+      html_url: "https://github.com/enshuwu46-png/ncm-batch-mp3/releases/tag/v1.2.0"
     }),
-    "https://github.com/enshuwu46-png/ncm-batch-mp3/releases/tag/v1.1.2"
+    "https://github.com/enshuwu46-png/ncm-batch-mp3/releases/tag/v1.2.0"
   );
-  assert.equal(officialReleaseURL({ tag_name: "v1.1.2", html_url: "https://example.com/update" }), null);
+  assert.equal(officialReleaseURL({ tag_name: "v1.2.0", html_url: "https://example.com/update" }), null);
 
   const expectedKeyBoxPrefix = [
     70, 218, 132, 64, 217, 166, 112, 195,

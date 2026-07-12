@@ -1683,8 +1683,8 @@ enum SelfTest {
         guard EricEvaEasterEgg.daysTogether(on: day894, calendar: calendar) == 894 else {
             throw NCMConversionError.output("彩蛋计时器日期计算异常")
         }
-        guard ReleaseUpdateChecker.isNewerVersion("v1.1.2", than: "1.1.1"),
-              !ReleaseUpdateChecker.isNewerVersion("1.1.2", than: "1.1.2") else {
+        guard ReleaseUpdateChecker.isNewerVersion("v1.2.0", than: "1.1.2"),
+              !ReleaseUpdateChecker.isNewerVersion("1.2.0", than: "1.2.0") else {
             throw NCMConversionError.output("版本比较异常")
         }
 
