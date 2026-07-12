@@ -41,7 +41,6 @@ const elements = {
   failedStat: $("#failedStat"),
   ffmpegStatus: $("#ffmpegStatus"),
   queueCounter: $("#queueCounter"),
-  queueHint: $("#queueHint"),
   dropSurface: $("#dropSurface"),
   dropZone: $("#dropZone"),
   queueList: $("#queueList"),
@@ -147,8 +146,6 @@ function renderQueue() {
   const empty = state.items.length === 0;
   elements.dropZone.classList.toggle("hidden", !empty);
   elements.queueList.classList.toggle("hidden", empty);
-  elements.queueHint.textContent = empty ? "拖入 .ncm 文件或文件夹，队列会自动去重。" : "选择队列项后可移除，转换中会显示状态。";
-
   if (empty) {
     elements.queueList.innerHTML = "";
     return;
@@ -247,7 +244,7 @@ function clearQueue() {
   if (state.converting) return;
   state.items = [];
   state.selectedId = null;
-  elements.logList.innerHTML = '<p class="muted">等待转换任务...</p>';
+  elements.logList.innerHTML = '<p class="muted">暂无记录</p>';
   render();
 }
 
@@ -398,8 +395,8 @@ async function boot() {
   const defaults = await bridge.getDefaults();
   state.outputDirectory = defaults.outputDirectory;
   elements.ffmpegStatus.textContent = defaults.ffmpegAvailable
-    ? "ffmpeg 已内置，可转码 FLAC/OGG/WAV"
-    : "未检测到 ffmpeg，只能导出原始音频";
+    ? "转换引擎已就绪"
+    : "转换引擎不可用";
   render();
 
   if (!window.ncmBridge) {

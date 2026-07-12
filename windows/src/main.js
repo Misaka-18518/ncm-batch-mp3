@@ -17,8 +17,8 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1180,
     height: 760,
-    minWidth: 980,
-    minHeight: 660,
+    minWidth: 940,
+    minHeight: 630,
     title: "NCM 批量转 MP3",
     backgroundColor: "#f6f8fb",
     frame: false,

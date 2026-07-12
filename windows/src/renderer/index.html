@@ -15,7 +15,6 @@
           </div>
           <div>
             <strong>NCM 批量转 MP3</strong>
-            <span>Windows 版 1.1.2</span>
           </div>
         </div>
         <div class="window-controls">
@@ -30,14 +29,6 @@
 
       <div class="content">
         <aside class="sidebar">
-          <div class="brand-card">
-            <div class="brand-icon">N</div>
-            <div>
-              <h1>NCM 转换器</h1>
-              <p>批量导入，自动解密，输出可播放 MP3。</p>
-            </div>
-          </div>
-
           <div class="stat-stack">
             <div class="stat-card">
               <span>队列</span>
@@ -61,25 +52,22 @@
             <div class="command-group">
               <button class="command primary-light" id="addFilesButton">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                <span>添加文件</span>
+                <span>添加</span>
               </button>
               <button class="command" id="addFolderButton">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5h7l2 2h9v8.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M15 14h4M17 12v4"/></svg>
-                <span>添加文件夹</span>
+                <span>文件夹</span>
               </button>
-              <button class="command ghost" id="removeButton">
+              <button class="command icon-command ghost" id="removeButton" aria-label="移除选中项" title="移除选中项">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg>
-                <span>移除</span>
               </button>
-              <button class="command ghost" id="clearButton">
+              <button class="command icon-command ghost" id="clearButton" aria-label="清空队列" title="清空队列">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="m9 7 .7-2h4.6L15 7"/><path d="M6 7l1 13h10l1-13"/></svg>
-                <span>清空</span>
               </button>
             </div>
             <div class="command-group">
-              <button class="command" id="openOutputButton">
+              <button class="command icon-command" id="openOutputButton" aria-label="打开输出目录" title="打开输出目录">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h7l2 2h9v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
-                <span>输出目录</span>
               </button>
               <button class="command accent" id="startButton">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7Z"/></svg>
@@ -97,7 +85,6 @@
               <div class="panel-heading">
                 <div>
                   <h2>转换队列</h2>
-                  <p id="queueHint">拖入 .ncm 文件或文件夹，队列会自动去重。</p>
                 </div>
                 <span class="counter" id="queueCounter">0 个文件</span>
               </div>
@@ -106,8 +93,7 @@
                 <div class="drop-icon">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 19h14"/></svg>
                 </div>
-                <h3>拖拽 NCM 文件到这里</h3>
-                <p>支持单文件、多个文件和文件夹递归扫描。</p>
+                <h3>拖入 .ncm 文件</h3>
               </div>
 
               <div class="queue-list hidden" id="queueList" role="list"></div>
@@ -117,7 +103,6 @@
               <div class="panel-heading compact">
                 <div>
                   <h2>输出设置</h2>
-                  <p>转换完成后会写入所选目录。</p>
                 </div>
               </div>
 
@@ -161,7 +146,7 @@
                   <div class="progress-fill" id="progressFill"></div>
                 </div>
                 <div class="log-list" id="logList">
-                  <p class="muted">等待转换任务...</p>
+                  <p class="muted">暂无记录</p>
                 </div>
               </div>
             </aside>

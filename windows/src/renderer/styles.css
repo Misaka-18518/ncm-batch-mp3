@@ -6,7 +6,7 @@
   --panel-strong: #ffffff;
   --stroke: rgba(21, 23, 25, 0.10);
   --shadow: 0 12px 38px rgba(15, 23, 42, 0.07);
-  --blue: #2563eb;
+  --blue: #1f2937;
   --green: #2f6f46;
   --red: #8f2f2f;
   --radius: 8px;
@@ -18,8 +18,8 @@
 
 body {
   margin: 0;
-  min-width: 960px;
-  min-height: 640px;
+  min-width: 940px;
+  min-height: 630px;
   color: var(--text);
   font-family: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", sans-serif;
   background:
@@ -65,13 +65,6 @@ button {
   display: block;
   font-size: 13px;
   line-height: 17px;
-}
-
-.window-title span {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 15px;
 }
 
 .app-logo {
@@ -131,9 +124,9 @@ button {
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-  gap: 18px;
-  padding: 18px;
+  grid-template-columns: 208px minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px;
 }
 
 .sidebar {
@@ -142,7 +135,6 @@ button {
   gap: 14px;
 }
 
-.brand-card,
 .stat-card,
 .side-status,
 .panel,
@@ -153,45 +145,11 @@ button {
   backdrop-filter: blur(20px);
 }
 
-.brand-card {
-  border-radius: 8px;
-  padding: 18px;
-  display: flex;
-  gap: 13px;
-  align-items: flex-start;
-}
-
-.brand-icon {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  flex: 0 0 auto;
-  color: white;
-  font-size: 22px;
-  font-weight: 800;
-  border-radius: 7px;
-  background: #111111;
-}
-
 h1,
 h2,
 h3,
 p {
   margin: 0;
-}
-
-.brand-card h1 {
-  font-size: 18px;
-  letter-spacing: 0;
-}
-
-.brand-card p,
-.panel-heading p,
-.drop-zone p {
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.55;
 }
 
 .stat-stack {
@@ -201,7 +159,7 @@ p {
 
 .stat-card {
   border-radius: 7px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -222,7 +180,7 @@ p {
 .side-status {
   margin-top: auto;
   border-radius: 7px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   color: var(--muted);
   font-size: 13px;
 }
@@ -236,19 +194,25 @@ p {
 }
 
 .command-bar {
-  min-height: 70px;
+  min-height: 60px;
   border-radius: 8px;
-  padding: 11px;
+  padding: 10px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .command-group {
   display: flex;
   align-items: center;
   gap: 9px;
+  flex-wrap: wrap;
+}
+
+.command-group:last-child {
+  margin-left: auto;
 }
 
 .command,
@@ -285,7 +249,7 @@ p {
 .segment:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.92);
-  border-color: rgba(37, 99, 235, 0.24);
+  border-color: rgba(15, 23, 42, 0.24);
 }
 
 .command:disabled,
@@ -299,12 +263,17 @@ p {
   color: white;
   background: var(--blue);
   border-color: transparent;
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.20);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
 }
 
 .command.primary-light {
-  color: #0f4db6;
+  color: var(--text);
   background: #ffffff;
+}
+
+.command.icon-command {
+  width: 38px;
+  padding: 0;
 }
 
 .command.danger {
@@ -316,14 +285,14 @@ p {
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(520px, 1fr) 390px;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 320px);
+  gap: 12px;
 }
 
 .panel {
   min-height: 0;
   border-radius: var(--radius);
-  padding: 18px;
+  padding: 16px;
 }
 
 .queue-panel {
@@ -335,8 +304,8 @@ p {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .panel-heading h2,
@@ -355,14 +324,14 @@ p {
 }
 
 .drop-zone {
-  min-height: 320px;
+  min-height: 260px;
   flex: 1;
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 12px;
+  gap: 10px;
   text-align: center;
-  border-radius: 14px;
+  border-radius: 8px;
   border: 1px dashed rgba(21, 23, 25, 0.22);
   background: #ffffff;
 }
@@ -374,8 +343,8 @@ p {
 }
 
 .drop-icon {
-  width: 92px;
-  height: 92px;
+  width: 72px;
+  height: 72px;
   display: grid;
   place-items: center;
   color: #1f2937;
@@ -386,12 +355,12 @@ p {
 }
 
 .drop-icon svg {
-  width: 42px;
-  height: 42px;
+  width: 32px;
+  height: 32px;
 }
 
 .drop-zone h3 {
-  font-size: 20px;
+  font-size: 17px;
 }
 
 .queue-list {
@@ -410,7 +379,7 @@ p {
   gap: 11px;
   align-items: center;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: 7px;
   border: 1px solid rgba(45, 64, 90, .08);
   background: rgba(255,255,255,.66);
 }
@@ -471,7 +440,7 @@ p {
 .settings-panel {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 13px;
 }
 
 .panel-heading.compact {
@@ -502,8 +471,8 @@ input[type="text"] {
 }
 
 input[type="text"]:focus {
-  border-color: rgba(37, 99, 235, .58);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, .12);
+  border-color: rgba(15, 23, 42, .48);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, .08);
 }
 
 .icon-button {
@@ -517,7 +486,7 @@ input[type="text"]:focus {
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   padding: 4px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: #eef1f5;
 }
 
@@ -529,7 +498,7 @@ input[type="text"]:focus {
 }
 
 .segment.selected {
-  color: #0f4db6;
+  color: var(--text);
   background: #ffffff;
   box-shadow: 0 3px 10px rgba(32, 48, 76, .08);
 }
@@ -587,7 +556,7 @@ input[type="checkbox"] {
   flex: 1;
   overflow: auto;
   padding: 12px;
-  border-radius: 10px;
+  border-radius: 7px;
   background: rgba(255,255,255,.62);
   border: 1px solid rgba(45,64,90,.08);
 }
@@ -617,13 +586,13 @@ input[type="checkbox"] {
   position: fixed;
   left: 10px;
   bottom: 10px;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   padding: 0;
   border: 0;
   background: transparent;
-  font-size: 15px;
-  line-height: 18px;
+  font-size: 11px;
+  line-height: 14px;
   cursor: default;
   z-index: 20;
 }
@@ -681,11 +650,11 @@ input[type="checkbox"] {
 
 @media (max-width: 1080px) {
   .content {
-    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-columns: 196px minmax(0, 1fr);
   }
 
   .main-grid {
-    grid-template-columns: minmax(500px, 1fr) 350px;
+    grid-template-columns: minmax(0, 1fr) 300px;
   }
 
   .command {
