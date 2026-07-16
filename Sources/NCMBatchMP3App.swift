@@ -1081,15 +1081,22 @@ extension View {
 }
 
 struct LiquidBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
         ZStack {
-            Color(red: 0.92, green: 0.90, blue: 0.85)
+            if colorScheme == .dark {
+                Color.black
+            } else {
+                Color(red: 0.92, green: 0.90, blue: 0.85)
+            }
 
             Rectangle()
-                .fill(Color.white.opacity(0.18))
+                .fill(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.18))
                 .frame(height: 1)
                 .frame(maxHeight: .infinity, alignment: .top)
         }
+        .animation(.easeInOut(duration: 0.18), value: colorScheme)
         .ignoresSafeArea()
     }
 }
@@ -1179,6 +1186,9 @@ struct SectionTitle: View {
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var manualColorScheme: ColorScheme?
+    @State private var isTutorialPresented = false
 
     var body: some View {
         ZStack {
@@ -1240,6 +1250,10 @@ struct ContentView: View {
         } message: {
             Text(model.updatePrompt?.message ?? "")
         }
+        .preferredColorScheme(manualColorScheme)
+        .sheet(isPresented: $isTutorialPresented) {
+            TutorialView()
+        }
     }
 
     private var header: some View {
@@ -1269,6 +1283,18 @@ struct ContentView: View {
             }
             .liquidButton()
             .help("检查更新")
+
+            Button {
+                manualColorScheme = colorScheme == .dark ? .light : .dark
+            } label: {
+                Image(systemName: colorScheme == .dark ? "moon.fill" : "sun.max.fill")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 16, height: 16)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .controlSize(.small)
+            .liquidButton()
+            .help("切换深浅色")
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 8)
@@ -1307,7 +1333,8 @@ struct ContentView: View {
             Spacer()
 
             Button(action: model.openOutputDirectory) {
-                Image(systemName: "folder")
+                Label("打开结果文件", systemImage: "folder")
+                    .labelStyle(.titleAndIcon)
             }
             .liquidButton()
             .help("在 Finder 中打开输出目录")
@@ -1335,9 +1362,19 @@ struct ContentView: View {
 
     private var mainContent: some View {
         HStack(spacing: 12) {
-            queuePanel
-                .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
-                .layoutPriority(1)
+            VStack(alignment: .leading, spacing: 8) {
+                Button {
+                    isTutorialPresented = true
+                } label: {
+                    Label("开始使用教程", systemImage: "book.pages")
+                }
+                .liquidButton()
+
+                queuePanel
+                    .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
+            .layoutPriority(1)
             inspectorPanel
                 .frame(minWidth: 300, idealWidth: 320, maxWidth: 340)
                 .frame(maxHeight: .infinity)
@@ -1504,6 +1541,78 @@ struct ContentView: View {
             }
         }
         return accepted
+    }
+}
+
+struct TutorialView: View {
+    @Environment(\.dismiss) private var dismiss
+
+    private let steps: [(String, String, String)] = [
+        ("1", "添加歌曲", "点击“添加文件”选择多个 .ncm，或点击“添加文件夹”批量扫描；也可以直接把文件或文件夹拖进窗口。"),
+        ("2", "设置输出目录", "在右侧“输出”区域选择保存位置。转换完成后，可用工具栏的文件夹按钮直接在 Finder 中打开。"),
+        ("3", "选择格式", "“优先 MP3”会保留原本就是 MP3 的歌曲，并通过内置 ffmpeg 把 FLAC、OGG 或 WAV 转成 MP3；“原始格式”只解密，不转码。"),
+        ("4", "调整命名", "开启“用歌曲信息命名”后，将优先使用歌手和歌曲名；关闭后保留原 NCM 文件名。同名文件默认自动追加序号。"),
+        ("5", "开始转换", "确认队列后点击“开始转换”。每首歌曲的状态、总进度和详细记录会实时显示，转换期间可以取消。"),
+        ("6", "查看结果", "成功项目会显示输出文件位置。若解密后的音频头无法识别，程序会停止该文件，避免生成无法播放的伪 MP3。"),
+        ("7", "获取更新", "右上角循环箭头会检查 GitHub Release。启动时也会静默检查，只有发现新版本时才提示下载。")
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("开始使用")
+                        .font(.title2.weight(.bold))
+                    Text("NCM 批量转 MP3")
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .frame(width: 28, height: 28)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(22)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    ForEach(steps, id: \.0) { step in
+                        HStack(alignment: .top, spacing: 13) {
+                            Text(step.0)
+                                .font(.callout.weight(.bold))
+                                .frame(width: 28, height: 28)
+                                .background(Color.primary.opacity(0.08), in: Circle())
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(step.1)
+                                    .font(.headline)
+                                Text(step.2)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                }
+                .padding(22)
+            }
+
+            Divider()
+            HStack {
+                Spacer()
+                Button("知道了") {
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .liquidButton(prominent: true)
+            }
+            .padding(16)
+        }
+        .frame(width: 600)
+        .frame(minHeight: 570, idealHeight: 650)
     }
 }
 

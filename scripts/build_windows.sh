@@ -3,68 +3,76 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WINDOWS_DIR="$ROOT_DIR/windows"
+BUILD_DIR="$ROOT_DIR/.build/windows-native"
+PUBLISH_DIR="$ROOT_DIR/dist/windows/app"
+OUTPUT_FILE="$ROOT_DIR/dist/windows/NCM-Batch-MP3-Setup-1.2.0-x64.exe"
 WIN_FFMPEG="$WINDOWS_DIR/resources/win/ffmpeg.exe"
+VERSION="1.2.0"
 
-NODE_BIN="${NODE_BIN:-}"
-PNPM_BIN="${PNPM_BIN:-}"
-PYTHON_BIN="${PYTHON_BIN:-}"
-
-if [[ -z "$NODE_BIN" ]]; then
-  NODE_BIN="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node"
+DOTNET_BIN="${DOTNET_BIN:-$ROOT_DIR/.build/dotnet/dotnet}"
+if [[ ! -x "$DOTNET_BIN" ]]; then
+  DOTNET_BIN="$(command -v dotnet || true)"
 fi
-if [[ ! -x "$NODE_BIN" ]]; then
-  NODE_BIN="$(command -v node || true)"
-fi
-if [[ -z "$PNPM_BIN" ]]; then
-  PNPM_BIN="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/bin/fallback/pnpm"
-fi
-if [[ ! -x "$PNPM_BIN" ]]; then
-  PNPM_BIN="$(command -v pnpm || true)"
-fi
-if [[ -z "$PYTHON_BIN" ]]; then
-  PYTHON_BIN="$HOME/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3"
-fi
-if [[ ! -x "$PYTHON_BIN" ]]; then
-  PYTHON_BIN="$(command -v python3 || true)"
-fi
-
-if [[ -z "$NODE_BIN" || -z "$PNPM_BIN" || -z "$PYTHON_BIN" ]]; then
-  echo "Missing Node.js, pnpm, or Python runtime" >&2
+if [[ -z "$DOTNET_BIN" ]]; then
+  echo "Missing .NET 8 SDK" >&2
   exit 1
 fi
 
-export PATH="$(dirname "$NODE_BIN"):$(dirname "$PNPM_BIN"):$PATH"
-export CI=true
-export PNPM_CONFIG_CONFIRM_MODULES_PURGE=false
-export ELECTRON_MIRROR="${ELECTRON_MIRROR:-https://npmmirror.com/mirrors/electron/}"
-export ELECTRON_BUILDER_BINARIES_MIRROR="${ELECTRON_BUILDER_BINARIES_MIRROR:-https://npmmirror.com/mirrors/electron-builder-binaries/}"
+export DOTNET_CLI_HOME="${DOTNET_CLI_HOME:-$ROOT_DIR/.build/dotnet-home}"
+export NUGET_PACKAGES="${NUGET_PACKAGES:-$ROOT_DIR/.build/nuget}"
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
 
-echo "Generating Windows icon..."
-"$PYTHON_BIN" "$WINDOWS_DIR/scripts/make_icon.py"
+mkdir -p "$BUILD_DIR" "$PUBLISH_DIR" "$(dirname "$WIN_FFMPEG")"
 
-echo "Installing Windows app dependencies..."
-cd "$WINDOWS_DIR"
-if [[ -f pnpm-lock.yaml ]]; then
-  "$PNPM_BIN" install --frozen-lockfile
-else
-  "$PNPM_BIN" install
-fi
-
-echo "Preparing Windows ffmpeg..."
 if [[ ! -f "$WIN_FFMPEG" ]]; then
-  mkdir -p "$WINDOWS_DIR/resources/win"
-  PACKAGE_FFMPEG="$WINDOWS_DIR/node_modules/@ffmpeg-installer/win32-x64/ffmpeg.exe"
-  if [[ ! -f "$PACKAGE_FFMPEG" ]]; then
-    echo "ffmpeg.exe not found in @ffmpeg-installer/win32-x64" >&2
-    exit 1
-  fi
-  cp "$PACKAGE_FFMPEG" "$WIN_FFMPEG"
+  echo "Downloading Windows ffmpeg..."
+  FFMPEG_ARCHIVE="$BUILD_DIR/win32-x64-4.1.0.tgz"
+  FFMPEG_UNPACKED="$BUILD_DIR/ffmpeg-package"
+  curl -L "https://registry.npmjs.org/@ffmpeg-installer/win32-x64/-/win32-x64-4.1.0.tgz" -o "$FFMPEG_ARCHIVE"
+  rm -rf "$FFMPEG_UNPACKED"
+  mkdir -p "$FFMPEG_UNPACKED"
+  tar -xzf "$FFMPEG_ARCHIVE" -C "$FFMPEG_UNPACKED"
+  cp "$FFMPEG_UNPACKED/package/ffmpeg.exe" "$WIN_FFMPEG"
 fi
 
-echo "Running Windows core tests..."
-"$PNPM_BIN" run test:core
+echo "Running native C# core tests..."
+"$DOTNET_BIN" run \
+  --project "$WINDOWS_DIR/NcmBatchMp3.Tests/NcmBatchMp3.Tests.csproj" \
+  --configuration Release \
+  --nologo
 
-echo "Building Windows installer..."
-"$PNPM_BIN" run dist:win
+echo "Publishing self-contained WPF app..."
+rm -rf "$PUBLISH_DIR"
+"$DOTNET_BIN" publish \
+  "$WINDOWS_DIR/NcmBatchMp3.App/NcmBatchMp3.App.csproj" \
+  --configuration Release \
+  --runtime win-x64 \
+  --self-contained true \
+  --output "$PUBLISH_DIR" \
+  -p:PublishReadyToRun=true \
+  -p:DebugType=None \
+  -p:DebugSymbols=false \
+  --nologo
 
-echo "Done: $ROOT_DIR/dist/windows"
+MAKENSIS_BIN="${MAKENSIS_BIN:-$(command -v makensis || true)}"
+if [[ -z "$MAKENSIS_BIN" && -x "$HOME/Library/Caches/electron-builder/nsis-3.0.4.1/nsis-3.0.4.1-w8az6/mac/makensis" ]]; then
+  NSIS_ROOT="$HOME/Library/Caches/electron-builder/nsis-3.0.4.1/nsis-3.0.4.1-w8az6"
+  MAKENSIS_BIN="$NSIS_ROOT/mac/makensis"
+  export NSISDIR="$NSIS_ROOT"
+fi
+if [[ -z "$MAKENSIS_BIN" ]]; then
+  echo "Missing NSIS makensis" >&2
+  exit 1
+fi
+
+echo "Building native Windows installer..."
+rm -f "$OUTPUT_FILE"
+"$MAKENSIS_BIN" \
+  -DVERSION="$VERSION" \
+  -DPUBLISH_DIR="$PUBLISH_DIR" \
+  -DOUTPUT_FILE="$OUTPUT_FILE" \
+  -DICON_FILE="$WINDOWS_DIR/assets/icon.ico" \
+  "$WINDOWS_DIR/installer/installer.nsi"
+
+echo "Done: $OUTPUT_FILE"

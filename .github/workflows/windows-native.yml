@@ -1,0 +1,62 @@
+name: Windows Native
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "windows/**"
+      - "scripts/build_windows.sh"
+      - ".github/workflows/windows-native.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 35
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Prepare bundled ffmpeg
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP "ffmpeg.tgz"
+          $extract = Join-Path $env:RUNNER_TEMP "ffmpeg-package"
+          $target = Join-Path $PWD "windows/resources/win/ffmpeg.exe"
+          New-Item -ItemType Directory -Force -Path (Split-Path $target), $extract | Out-Null
+          Invoke-WebRequest "https://registry.npmjs.org/@ffmpeg-installer/win32-x64/-/win32-x64-4.1.0.tgz" -OutFile $archive
+          tar -xzf $archive -C $extract
+          Copy-Item (Join-Path $extract "package/ffmpeg.exe") $target
+
+      - name: Test native conversion core
+        run: dotnet run --project windows/NcmBatchMp3.Tests/NcmBatchMp3.Tests.csproj --configuration Release --nologo
+
+      - name: Publish self-contained WPF app
+        run: dotnet publish windows/NcmBatchMp3.App/NcmBatchMp3.App.csproj --configuration Release --runtime win-x64 --self-contained true --output dist/windows/app -p:PublishReadyToRun=true -p:DebugType=None -p:DebugSymbols=false --nologo
+
+      - name: Install NSIS
+        shell: pwsh
+        run: choco install nsis -y --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $makensis = Join-Path ${env:ProgramFiles(x86)} "NSIS/makensis.exe"
+          $publish = (Resolve-Path "dist/windows/app").Path
+          $output = Join-Path $PWD "dist/windows/NCM-Batch-MP3-Setup-1.2.0-x64.exe"
+          $icon = (Resolve-Path "windows/assets/icon.ico").Path
+          & $makensis "/DVERSION=1.2.0" "/DPUBLISH_DIR=$publish" "/DOUTPUT_FILE=$output" "/DICON_FILE=$icon" "windows/installer/installer.nsi"
+          if ($LASTEXITCODE -ne 0 -or -not (Test-Path $output)) { exit 1 }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NCM-Batch-MP3-Setup-1.2.0-x64
+          path: dist/windows/NCM-Batch-MP3-Setup-1.2.0-x64.exe
+          if-no-files-found: error

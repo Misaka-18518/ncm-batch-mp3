@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Version>1.2.0</Version>
+    <AssemblyName>NCM Batch MP3</AssemblyName>
+    <RootNamespace>NcmBatchMp3.App</RootNamespace>
+    <ApplicationIcon>..\assets\icon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NcmBatchMp3.Core\NcmBatchMp3.Core.csproj" />
+    <Resource Include="..\assets\icon.png" Link="assets\icon.png" />
+    <Content Include="..\resources\FFMPEG_WINDOWS_NOTICE.txt" Link="ffmpeg\NOTICE.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\resources\win\ffmpeg.exe"
+             Link="ffmpeg\ffmpeg.exe"
+             CopyToOutputDirectory="PreserveNewest"
+             Condition="Exists('..\resources\win\ffmpeg.exe')" />
+  </ItemGroup>
+</Project>

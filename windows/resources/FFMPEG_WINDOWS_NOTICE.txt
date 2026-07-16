@@ -3,6 +3,7 @@ Windows builds bundle ffmpeg.exe for local audio transcoding.
 Source:
 https://www.npmjs.com/package/@ffmpeg-installer/win32-x64
 
-The installer copies ffmpeg.exe from @ffmpeg-installer/win32-x64 when generated
-by scripts/build_windows.sh. ffmpeg is distributed by its upstream project under
-its own license terms. This project is distributed as GPLv3-or-later.
+The native WPF build extracts ffmpeg.exe from the package archive when generated
+by scripts/build_windows.sh or GitHub Actions. ffmpeg is distributed by its
+upstream project under its own license terms. This project is distributed as
+GPLv3-or-later.

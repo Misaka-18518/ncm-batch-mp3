@@ -1,0 +1,86 @@
+<Window x:Class="NcmBatchMp3.App.TutorialWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="开始使用"
+        Width="620"
+        Height="680"
+        MinWidth="520"
+        MinHeight="540"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        ShowInTaskbar="False"
+        Background="#FFF5F5F3"
+        Foreground="{DynamicResource InkBrush}"
+        FontFamily="Segoe UI Variable, Microsoft YaHei UI, Segoe UI"
+        FontSize="13">
+    <Grid x:Name="TutorialRoot" Background="{DynamicResource CanvasBrush}" Margin="14">
+        <Border Style="{StaticResource PanelBorder}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="1" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="1" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Margin="22,18">
+                    <TextBlock Text="开始使用" FontSize="22" FontWeight="SemiBold" />
+                    <TextBlock Text="NCM 批量转 MP3" Foreground="{DynamicResource MutedBrush}" Margin="0,4,0,0" />
+                </StackPanel>
+
+                <Grid Grid.Row="1" Background="{DynamicResource LineBrush}" />
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="22,20">
+                        <Grid Margin="0,0,0,22">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="34" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource EmphasisSurfaceBrush}" VerticalAlignment="Top"><TextBlock Text="1" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                            <StackPanel Grid.Column="1"><TextBlock Text="添加歌曲" FontSize="15" FontWeight="SemiBold" /><TextBlock Text="点击“文件”选择多个 .ncm，或点击“文件夹”批量扫描；也可以直接把文件或文件夹拖进窗口。" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,0" /></StackPanel>
+                        </Grid>
+                        <Grid Margin="0,0,0,22">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="34" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource EmphasisSurfaceBrush}" VerticalAlignment="Top"><TextBlock Text="2" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                            <StackPanel Grid.Column="1"><TextBlock Text="设置输出目录" FontSize="15" FontWeight="SemiBold" /><TextBlock Text="在右侧“输出”区域选择保存位置。转换完成后，可以用旁边的文件夹按钮直接打开结果目录。" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,0" /></StackPanel>
+                        </Grid>
+                        <Grid Margin="0,0,0,22">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="34" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource EmphasisSurfaceBrush}" VerticalAlignment="Top"><TextBlock Text="3" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                            <StackPanel Grid.Column="1"><TextBlock Text="选择格式" FontSize="15" FontWeight="SemiBold" /><TextBlock Text="“优先 MP3”会保留原本就是 MP3 的歌曲，并通过内置 ffmpeg 把 FLAC、OGG 或 WAV 转成 MP3；“原格式”只解密，不转码。" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,0" /></StackPanel>
+                        </Grid>
+                        <Grid Margin="0,0,0,22">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="34" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource EmphasisSurfaceBrush}" VerticalAlignment="Top"><TextBlock Text="4" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                            <StackPanel Grid.Column="1"><TextBlock Text="调整命名" FontSize="15" FontWeight="SemiBold" /><TextBlock Text="开启“按歌曲信息命名”后，将优先使用歌手和歌曲名；关闭后保留原 NCM 文件名。同名文件默认自动追加序号。" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,0" /></StackPanel>
+                        </Grid>
+                        <Grid Margin="0,0,0,22">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="34" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource EmphasisSurfaceBrush}" VerticalAlignment="Top"><TextBlock Text="5" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                            <StackPanel Grid.Column="1"><TextBlock Text="开始转换" FontSize="15" FontWeight="SemiBold" /><TextBlock Text="确认队列后点击“开始转换”。每首歌曲的状态、总进度和记录会实时显示，转换期间可以取消。" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,0" /></StackPanel>
+                        </Grid>
+                        <Grid Margin="0,0,0,22">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="34" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource EmphasisSurfaceBrush}" VerticalAlignment="Top"><TextBlock Text="6" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                            <StackPanel Grid.Column="1"><TextBlock Text="查看结果" FontSize="15" FontWeight="SemiBold" /><TextBlock Text="成功项目会显示输出文件位置。若解密后的音频头无法识别，程序会停止该文件，避免生成无法播放的伪 MP3。" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,0" /></StackPanel>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="34" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+                            <Border Width="28" Height="28" CornerRadius="14" Background="{DynamicResource EmphasisSurfaceBrush}" VerticalAlignment="Top"><TextBlock Text="7" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                            <StackPanel Grid.Column="1"><TextBlock Text="获取更新" FontSize="15" FontWeight="SemiBold" /><TextBlock Text="顶部循环箭头会检查 GitHub Release。启动时也会静默检查，只有发现新版本时才提示下载。" Foreground="{DynamicResource MutedBrush}" TextWrapping="Wrap" Margin="0,5,0,0" /></StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <Grid Grid.Row="3" Background="{DynamicResource LineBrush}" />
+                <Button Grid.Row="4"
+                        Style="{StaticResource PrimaryButton}"
+                        Content="知道了"
+                        Width="86"
+                        HorizontalAlignment="Right"
+                        Margin="16"
+                        IsDefault="True"
+                        Click="Close_Click" />
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

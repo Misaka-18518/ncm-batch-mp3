@@ -6,8 +6,9 @@
 
 ## 功能
 
-- macOS 原生 SwiftUI 界面
-- Windows 版现代白色桌面 UI，提供 NSIS 安装器
+- macOS 原生 SwiftUI 界面，支持跟随系统的浅色 / 深色外观和手动切换
+- Windows 原生 C# / WPF 桌面应用，不包含 Electron 或浏览器内核；Windows 11 使用系统 Mica 云母背景，旧系统自动回退
+- macOS / Windows 默认跟随系统深浅色，均可通过右上角太阳 / 月亮按钮在本次运行中手动切换
 - 批量添加 `.ncm` 文件
 - 文件夹递归扫描
 - 拖拽导入
@@ -16,6 +17,7 @@
 - 同名文件覆盖开关
 - 优先输出 MP3 / 保留原始格式
 - 队列状态、进度条、日志
+- macOS / Windows 均提供队列前的原生“开始使用教程”
 - 启动时自动检测 GitHub Release 新版本，也可手动检查并跳转下载
 - macOS 版内置 Apple Silicon ffmpeg 8.1，Windows 版内置 x64 ffmpeg，无需用户另装 ffmpeg
 - macOS 15.0+ deployment target，面向 macOS 15-27 做兼容；macOS 26+ 在拖拽区和操作区使用系统玻璃效果，旧系统自动降级为兼容材质
@@ -72,7 +74,9 @@ dist/NCM批量转MP3-1.2.0-macOS-arm64.dmg
 
 ### Windows
 
-Windows 版源码在 `windows/`，使用 Electron 和 electron-builder 生成 x64 NSIS 安装器：
+Windows 版源码在 `windows/`，界面和转换核心均使用 C#，由 WPF 生成原生 x64 桌面程序，再用 NSIS 打包。发布配置为 self-contained，用户无需另装 .NET 或 ffmpeg。
+
+需要 .NET 8 SDK 和 NSIS：
 
 ```bash
 ./scripts/build_windows.sh
@@ -84,7 +88,7 @@ Windows 版源码在 `windows/`，使用 Electron 和 electron-builder 生成 x6
 dist/windows/NCM-Batch-MP3-Setup-1.2.0-x64.exe
 ```
 
-构建脚本会从 `@ffmpeg-installer/win32-x64` 复制 `ffmpeg.exe` 到安装器资源中。
+构建脚本会运行 C# 合成 NCM 往返测试、发布 `win-x64` WPF 应用，并将 `@ffmpeg-installer/win32-x64` 提供的 `ffmpeg.exe` 打入安装器。
 
 ## 测试
 
@@ -95,6 +99,7 @@ dist/windows/NCM-Batch-MP3-Setup-1.2.0-x64.exe
 测试包含：
 
 - SwiftUI App 内置 NCM roundtrip 自测
+- Windows 原生 C# 核心的合成 NCM roundtrip 自测
 - 合成 NCM 解密测试
 - 合成 FLAC NCM -> 内置 ffmpeg -> MP3 -> 解码验证
 
@@ -108,7 +113,7 @@ dist/windows/NCM-Batch-MP3-Setup-1.2.0-x64.exe
 
 该 ffmpeg 构建启用了 `--enable-gpl`。本项目采用 GPLv3-or-later 发布。
 
-Windows 版内置 `@ffmpeg-installer/win32-x64` 提供的 `ffmpeg.exe`，详见 `windows/resources/FFMPEG_WINDOWS_NOTICE.txt`。
+Windows 原生版内置 `@ffmpeg-installer/win32-x64` 提供的 `ffmpeg.exe`，详见 `windows/resources/FFMPEG_WINDOWS_NOTICE.txt`。
 
 ## 免责声明
 
