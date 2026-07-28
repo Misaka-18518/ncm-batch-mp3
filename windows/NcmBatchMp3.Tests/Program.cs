@@ -8,6 +8,8 @@ internal static class Program
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("CTENFDAM");
     private static readonly byte[] CoreKey = Convert.FromHexString("687A4852416D736F356B496E62617857");
     private static readonly byte[] MetadataKey = Convert.FromHexString("2331346C6A6B5F215C5D2630553C2728");
+    private static readonly byte[] CoverPng = Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFElEQVR4nGP8z8DAwMDAxMDAwMDAAAANHQEDasKb6QAAAABJRU5ErkJggg==");
 
     private static async Task Main()
     {
@@ -49,7 +51,7 @@ internal static class Program
             var expectedAudio = Encoding.Latin1.GetBytes("ID3\x04\x00\x00\x00\x00\x00\x10")
                 .Concat(Encoding.UTF8.GetBytes(string.Concat(Enumerable.Repeat("synthetic audio payload", 64))))
                 .ToArray();
-            await BuildSyntheticNcmAsync(sourcePath, expectedAudio, "mp3", "Synthetic Track");
+            await BuildSyntheticNcmAsync(sourcePath, expectedAudio, "mp3", "Synthetic Track", CoverPng);
 
             var converter = new NcmConverter();
             var result = await converter.ConvertAsync(
@@ -72,7 +74,8 @@ internal static class Program
         string filePath,
         byte[] audio,
         string audioFormat,
-        string title)
+        string title,
+        byte[] cover)
     {
         var keyData = Encoding.UTF8.GetBytes("test-stream-key");
         var keyPlain = Encoding.UTF8.GetBytes("neteasecloudmusic").Concat(keyData).ToArray();
@@ -81,6 +84,7 @@ internal static class Program
         {
             musicName = title,
             artist = new object[] { new object[] { "Codex", 1 } },
+            album = "Synthetic Album",
             format = audioFormat
         });
         var metadataPlain = Encoding.UTF8.GetBytes($"music:{metadata}");
@@ -98,8 +102,10 @@ internal static class Program
         await output.WriteAsync(BitConverter.GetBytes((uint)encryptedMetadata.Length));
         await output.WriteAsync(encryptedMetadata);
         await output.WriteAsync(new byte[5]);
-        await output.WriteAsync(new byte[4]);
-        await output.WriteAsync(new byte[4]);
+        await output.WriteAsync(BitConverter.GetBytes((uint)(cover.Length + 3)));
+        await output.WriteAsync(BitConverter.GetBytes((uint)cover.Length));
+        await output.WriteAsync(cover);
+        await output.WriteAsync(new byte[3]);
         await output.WriteAsync(encryptedAudio);
     }
 

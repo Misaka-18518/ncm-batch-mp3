@@ -20,10 +20,11 @@ public sealed record ConversionResult(
     bool Transcoded,
     string Message);
 
-internal sealed record NcmMetadata(string Title, string Artists);
+internal sealed record NcmMetadata(string Title, string Artists, string Album);
 
 internal sealed record ExtractionResult(
     string TempDirectory,
     string AudioPath,
     NcmMetadata Metadata,
-    string SourceFormat);
+    string SourceFormat,
+    string? CoverPath);

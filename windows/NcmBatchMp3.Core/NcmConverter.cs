@@ -12,6 +12,7 @@ public sealed class NcmConverter
     private static readonly byte[] CoreKey = Convert.FromHexString("687A4852416D736F356B496E62617857");
     private static readonly byte[] MetadataKey = Convert.FromHexString("2331346C6A6B5F215C5D2630553C2728");
     private const int ChunkSize = 1024 * 1024;
+    private const int MaxCoverBytes = 32 * 1024 * 1024;
 
     public async Task<ConversionResult> ConvertAsync(
         string inputPath,
@@ -43,7 +44,14 @@ public sealed class NcmConverter
                 progress?.Report(new ConversionProgress("transcode", 0.92));
                 try
                 {
-                    await TranscodeToMp3Async(extraction.AudioPath, target, ffmpegPath, cancellationToken)
+                    await TranscodeToMp3Async(
+                            extraction.AudioPath,
+                            target,
+                            ffmpegPath,
+                            extraction.Metadata,
+                            extraction.CoverPath,
+                            copyAudio: false,
+                            cancellationToken)
                         .ConfigureAwait(false);
                 }
                 catch
@@ -57,6 +65,33 @@ public sealed class NcmConverter
                     extraction.SourceFormat,
                     true,
                     $"已从 {extraction.SourceFormat.ToUpperInvariant()} 转码为 MP3");
+            }
+
+            if (extraction.SourceFormat == "mp3" &&
+                !string.IsNullOrWhiteSpace(ffmpegPath) &&
+                !string.IsNullOrWhiteSpace(extraction.CoverPath))
+            {
+                var target = UniqueOutputPath(options.OutputDirectory, stem, "mp3", options.OverwriteExisting);
+                progress?.Report(new ConversionProgress("metadata", 0.92));
+                try
+                {
+                    await TranscodeToMp3Async(
+                            extraction.AudioPath,
+                            target,
+                            ffmpegPath,
+                            extraction.Metadata,
+                            extraction.CoverPath,
+                            copyAudio: true,
+                            cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch
+                {
+                    TryDeleteFile(target);
+                    throw;
+                }
+                progress?.Report(new ConversionProgress("done", 1));
+                return new ConversionResult(target, "mp3", false, "已导出 MP3（含封面）");
             }
 
             var extension = preferMp3 && extraction.SourceFormat == "mp3"
@@ -167,11 +202,14 @@ public sealed class NcmConverter
             }
 
             await output.FlushAsync(cancellationToken).ConfigureAwait(false);
+            var coverPath = await WriteCoverFileAsync(header.CoverData, tempDirectory, cancellationToken)
+                .ConfigureAwait(false);
             return new ExtractionResult(
                 tempDirectory,
                 audioPath,
                 header.Metadata,
-                SniffAudioFormat(firstBytes.ToArray()));
+                SniffAudioFormat(firstBytes.ToArray()),
+                coverPath);
         }
         catch
         {
@@ -208,8 +246,8 @@ public sealed class NcmConverter
         Xor(encryptedMetadata, 0x63);
         var metadata = ParseMetadata(encryptedMetadata);
 
-        await SkipCoverAreaAsync(cursor, fileSize, cancellationToken).ConfigureAwait(false);
-        return new NcmHeader(keyBox, metadata, cursor.Position);
+        var coverData = await ReadCoverAreaAsync(cursor, fileSize, cancellationToken).ConfigureAwait(false);
+        return new NcmHeader(keyBox, metadata, coverData, cursor.Position);
     }
 
     private static int CheckedLength(uint length)
@@ -222,7 +260,7 @@ public sealed class NcmConverter
         return checked((int)length);
     }
 
-    private static async Task SkipCoverAreaAsync(
+    private static async Task<byte[]?> ReadCoverAreaAsync(
         BinaryCursor cursor,
         long fileSize,
         CancellationToken cancellationToken)
@@ -239,7 +277,9 @@ public sealed class NcmConverter
                 throw new InvalidDataException("封面长度字段异常，无法定位音频数据");
             }
 
+            var coverData = await ReadCoverPayloadAsync(cursor, imageLength, cancellationToken).ConfigureAwait(false);
             cursor.Seek(payloadStart + frameLength, fileSize);
+            return coverData;
         }
         catch (Exception error) when (error is InvalidDataException or EndOfStreamException)
         {
@@ -253,8 +293,28 @@ public sealed class NcmConverter
                 throw new InvalidDataException("封面长度字段异常，无法定位音频数据");
             }
 
+            var coverData = await ReadCoverPayloadAsync(cursor, imageLength, cancellationToken).ConfigureAwait(false);
             cursor.Seek(payloadStart + imageLength, fileSize);
+            return coverData;
         }
+    }
+
+    private static async Task<byte[]?> ReadCoverPayloadAsync(
+        BinaryCursor cursor,
+        uint imageLength,
+        CancellationToken cancellationToken)
+    {
+        if (imageLength == 0)
+        {
+            return null;
+        }
+
+        if (imageLength > MaxCoverBytes)
+        {
+            return null;
+        }
+
+        return await cursor.ReadAsync(checked((int)imageLength), cancellationToken).ConfigureAwait(false);
     }
 
     private static NcmMetadata ParseMetadata(byte[] raw)
@@ -273,7 +333,8 @@ public sealed class NcmConverter
             var root = document.RootElement;
             var title = JsonString(root, "musicName") ?? JsonString(root, "name") ?? string.Empty;
             var artists = ParseArtists(root);
-            return new NcmMetadata(title, artists);
+            var album = ParseAlbum(root);
+            return new NcmMetadata(title, artists, album);
         }
         catch (Exception error) when (error is FormatException or CryptographicException or JsonException)
         {
@@ -327,6 +388,37 @@ public sealed class NcmConverter
         }
 
         return string.Join("、", names);
+    }
+
+    private static string ParseAlbum(JsonElement root)
+    {
+        if (!root.TryGetProperty("album", out var album))
+        {
+            return string.Empty;
+        }
+
+        if (album.ValueKind == JsonValueKind.String)
+        {
+            return album.GetString() ?? string.Empty;
+        }
+
+        if (album.ValueKind == JsonValueKind.Object &&
+            album.TryGetProperty("name", out var name) &&
+            name.ValueKind == JsonValueKind.String)
+        {
+            return name.GetString() ?? string.Empty;
+        }
+
+        if (album.ValueKind == JsonValueKind.Array)
+        {
+            var enumerator = album.EnumerateArray();
+            if (enumerator.MoveNext() && enumerator.Current.ValueKind == JsonValueKind.String)
+            {
+                return enumerator.Current.GetString() ?? string.Empty;
+            }
+        }
+
+        return string.Empty;
     }
 
     private static void DecryptAudioChunk(Span<byte> chunk, byte[] keyBox, long absoluteOffset)
@@ -388,6 +480,46 @@ public sealed class NcmConverter
         }
 
         return "unknown";
+    }
+
+    private static async Task<string?> WriteCoverFileAsync(
+        byte[]? coverData,
+        string tempDirectory,
+        CancellationToken cancellationToken)
+    {
+        if (coverData is null || coverData.Length == 0 || CoverFileExtension(coverData) is not { } extension)
+        {
+            return null;
+        }
+
+        var coverPath = Path.Combine(tempDirectory, $"cover.{extension}");
+        await File.WriteAllBytesAsync(coverPath, coverData, cancellationToken).ConfigureAwait(false);
+        return coverPath;
+    }
+
+    private static string? CoverFileExtension(ReadOnlySpan<byte> data)
+    {
+        if (data.Length >= 3 && data[0] == 0xff && data[1] == 0xd8 && data[2] == 0xff)
+        {
+            return "jpg";
+        }
+
+        if (data.Length >= 8 && data[..8].SequenceEqual(new byte[] { 0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a }))
+        {
+            return "png";
+        }
+
+        if (data.StartsWith("GIF87a"u8) || data.StartsWith("GIF89a"u8))
+        {
+            return "gif";
+        }
+
+        if (data.Length >= 12 && data[..4].SequenceEqual("RIFF"u8) && data[8..12].SequenceEqual("WEBP"u8))
+        {
+            return "webp";
+        }
+
+        return null;
     }
 
     private static string OutputStem(string inputPath, NcmMetadata metadata, bool renameByMetadata)
@@ -486,6 +618,9 @@ public sealed class NcmConverter
         string inputPath,
         string outputPath,
         string ffmpegPath,
+        NcmMetadata metadata,
+        string? coverPath,
+        bool copyAudio,
         CancellationToken cancellationToken)
     {
         var startInfo = new ProcessStartInfo(ffmpegPath)
@@ -495,11 +630,52 @@ public sealed class NcmConverter
             RedirectStandardError = true,
             RedirectStandardOutput = true
         };
-        foreach (var argument in new[]
+        var arguments = new List<string>
+        {
+            "-hide_banner", "-loglevel", "error", "-y", "-i", inputPath
+        };
+        if (!string.IsNullOrWhiteSpace(coverPath))
+        {
+            arguments.AddRange(["-i", coverPath]);
+        }
+
+        arguments.AddRange(["-map", "0:a:0", "-map_metadata", "0"]);
+        if (!string.IsNullOrWhiteSpace(coverPath))
+        {
+            arguments.AddRange(["-map", "1:v:0"]);
+        }
+
+        arguments.AddRange(copyAudio
+            ? ["-codec:a", "copy"]
+            : ["-codec:a", "libmp3lame", "-q:a", "2"]);
+        if (!string.IsNullOrWhiteSpace(coverPath))
+        {
+            arguments.AddRange([
+                "-codec:v", "mjpeg",
+                "-pix_fmt", "yuvj420p",
+                "-q:v", "2",
+                "-frames:v", "1",
+                "-disposition:v:0", "attached_pic",
+                "-metadata:s:v", "title=Album cover",
+                "-metadata:s:v", "comment=Cover (front)"
+            ]);
+        }
+
+        foreach (var (key, value) in new[]
                  {
-                     "-hide_banner", "-loglevel", "error", "-y", "-i", inputPath,
-                     "-codec:a", "libmp3lame", "-q:a", "2", outputPath
+                     ("title", metadata.Title),
+                     ("artist", metadata.Artists),
+                     ("album", metadata.Album)
                  })
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                arguments.AddRange(["-metadata", $"{key}={value}"]);
+            }
+        }
+
+        arguments.AddRange(["-id3v2_version", "3", "-write_id3v1", "1", outputPath]);
+        foreach (var argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
         }
@@ -569,7 +745,7 @@ public sealed class NcmConverter
         }
     }
 
-    private sealed record NcmHeader(byte[] KeyBox, NcmMetadata Metadata, long AudioOffset);
+    private sealed record NcmHeader(byte[] KeyBox, NcmMetadata Metadata, byte[]? CoverData, long AudioOffset);
 
     private sealed class BinaryCursor(FileStream stream)
     {

@@ -60,13 +60,21 @@ def xor_with_box(data: bytes, box: list[int]) -> bytes:
     return bytes(out)
 
 
-def build_ncm(path: Path, audio: bytes, audio_format: str, title: str = "Synthetic Track") -> None:
+def build_ncm(
+    path: Path,
+    audio: bytes,
+    audio_format: str,
+    title: str = "Synthetic Track",
+    album: str = "Synthetic Album",
+    cover: bytes = b"",
+) -> None:
     key_data = b"test-stream-key"
     encrypted_key = bytes(byte ^ 0x64 for byte in aes_encrypt(b"neteasecloudmusic" + key_data, CORE_KEY))
 
     metadata = {
         "musicName": title,
         "artist": [["Codex", 1]],
+        "album": album,
         "format": audio_format,
     }
     meta_plain = b"music:" + json.dumps(metadata, ensure_ascii=False).encode("utf-8")
@@ -82,7 +90,10 @@ def build_ncm(path: Path, audio: bytes, audio_format: str, title: str = "Synthet
     blob += struct.pack("<I", len(encrypted_meta))
     blob += encrypted_meta
     blob += b"\x00" * 5
-    blob += struct.pack("<I", 0)
-    blob += struct.pack("<I", 0)
+    cover_padding = b"\x00" * 3 if cover else b""
+    blob += struct.pack("<I", len(cover) + len(cover_padding))
+    blob += struct.pack("<I", len(cover))
+    blob += cover
+    blob += cover_padding
     blob += encrypted_audio
     path.write_bytes(bytes(blob))

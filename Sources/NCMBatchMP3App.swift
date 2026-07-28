@@ -223,10 +223,12 @@ enum NCMConverterCore {
     static let metaKey = Data(hexString: "2331346C6A6B5F215C5D2630553C2728")
     static let opensslPath = "/usr/bin/openssl"
     static let chunkSize = 1024 * 1024
+    static let maxCoverBytes = 32 * 1024 * 1024
 
     struct ParsedHeader {
         let keyBox: [UInt8]
         let metadata: [String: Any]
+        let coverData: Data?
     }
 
     static func convertOne(inputURL: URL, options: ConversionOptions) throws -> ConversionResult {
@@ -244,22 +246,52 @@ enum NCMConverterCore {
             throw NCMConversionError.output("解密后的音频头无法识别，已停止输出，避免生成无法播放的文件")
         }
         let stem = outputStem(inputURL: inputURL, metadata: extraction.metadata, renameByMetadata: options.renameByMetadata)
+        let coverURL = try writeCoverFile(extraction.coverData, to: tempDirectory)
 
         if options.outputMode == .original {
             let target = try uniqueURL(options.outputDirectory.appendingPathComponent(stem).appendingPathExtension(extraction.sourceFormat), overwrite: options.overwriteExisting)
+            if extraction.sourceFormat == "mp3", let ffmpeg = findFFmpeg(), coverURL != nil {
+                try transcodeToMP3(
+                    inputURL: tempAudioURL,
+                    outputURL: target,
+                    ffmpegPath: ffmpeg,
+                    metadata: extraction.metadata,
+                    coverURL: coverURL,
+                    copyAudio: true
+                )
+                return ConversionResult(inputURL: inputURL, outputURL: target, sourceFormat: "mp3", transcoded: false, message: "已导出 MP3（含封面）")
+            }
             try moveReplacingIfNeeded(from: tempAudioURL, to: target, overwrite: options.overwriteExisting)
             return ConversionResult(inputURL: inputURL, outputURL: target, sourceFormat: extraction.sourceFormat, transcoded: false, message: "已导出原始音频")
         }
 
         if extraction.sourceFormat == "mp3" {
             let target = try uniqueURL(options.outputDirectory.appendingPathComponent(stem).appendingPathExtension("mp3"), overwrite: options.overwriteExisting)
+            if let ffmpeg = findFFmpeg(), coverURL != nil {
+                try transcodeToMP3(
+                    inputURL: tempAudioURL,
+                    outputURL: target,
+                    ffmpegPath: ffmpeg,
+                    metadata: extraction.metadata,
+                    coverURL: coverURL,
+                    copyAudio: true
+                )
+                return ConversionResult(inputURL: inputURL, outputURL: target, sourceFormat: "mp3", transcoded: false, message: "已转换为 MP3（含封面）")
+            }
             try moveReplacingIfNeeded(from: tempAudioURL, to: target, overwrite: options.overwriteExisting)
             return ConversionResult(inputURL: inputURL, outputURL: target, sourceFormat: "mp3", transcoded: false, message: "已转换为 MP3")
         }
 
         if let ffmpeg = findFFmpeg() {
             let target = try uniqueURL(options.outputDirectory.appendingPathComponent(stem).appendingPathExtension("mp3"), overwrite: options.overwriteExisting)
-            try transcodeToMP3(inputURL: tempAudioURL, outputURL: target, ffmpegPath: ffmpeg)
+            try transcodeToMP3(
+                inputURL: tempAudioURL,
+                outputURL: target,
+                ffmpegPath: ffmpeg,
+                metadata: extraction.metadata,
+                coverURL: coverURL,
+                copyAudio: false
+            )
             return ConversionResult(inputURL: inputURL, outputURL: target, sourceFormat: extraction.sourceFormat, transcoded: true, message: "已从 \(extraction.sourceFormat.uppercased()) 转码为 MP3")
         }
 
@@ -274,7 +306,7 @@ enum NCMConverterCore {
         )
     }
 
-    static func extractNCM(inputURL: URL, outputURL: URL) throws -> (metadata: [String: Any], sourceFormat: String) {
+    static func extractNCM(inputURL: URL, outputURL: URL) throws -> (metadata: [String: Any], sourceFormat: String, coverData: Data?) {
         let reader = try BinaryReader(url: inputURL)
         let fileSize = try FileManager.default.attributesOfItem(atPath: inputURL.path)[.size] as? UInt64 ?? 0
         let header = try readHeader(reader: reader, fileSize: fileSize)
@@ -304,7 +336,7 @@ enum NCMConverterCore {
             offset += bytes.count
         }
 
-        return (header.metadata, sniffAudioFormat(firstBytes: firstBytes, metadata: header.metadata))
+        return (header.metadata, sniffAudioFormat(firstBytes: firstBytes, metadata: header.metadata), header.coverData)
     }
 
     static func readHeader(reader: BinaryReader, fileSize: UInt64) throws -> ParsedHeader {
@@ -326,12 +358,12 @@ enum NCMConverterCore {
         let encryptedMetadata = xor(data: try reader.read(count: metadataLength), value: 0x63)
         let metadata = try parseMetadata(encryptedMetadata)
 
-        try skipCoverArea(reader: reader, fileSize: fileSize)
+        let coverData = try readCoverArea(reader: reader, fileSize: fileSize)
 
-        return ParsedHeader(keyBox: keyBox, metadata: metadata)
+        return ParsedHeader(keyBox: keyBox, metadata: metadata, coverData: coverData)
     }
 
-    static func skipCoverArea(reader: BinaryReader, fileSize: UInt64) throws {
+    static func readCoverArea(reader: BinaryReader, fileSize: UInt64) throws -> Data? {
         let start = try reader.offset()
 
         do {
@@ -345,7 +377,9 @@ enum NCMConverterCore {
                 throw NCMConversionError.incompleteFile("封面长度字段异常，无法定位音频数据")
             }
 
+            let coverData = try readCoverPayload(reader: reader, imageLength: imageLength)
             try reader.seek(to: payloadStart + coverFrameLength)
+            return coverData
         } catch {
             try reader.seek(to: start)
             _ = try reader.read(count: 4)
@@ -355,8 +389,21 @@ enum NCMConverterCore {
             guard payloadStart + imageLength <= fileSize else {
                 throw NCMConversionError.incompleteFile("封面长度字段异常，无法定位音频数据")
             }
+            let coverData = try readCoverPayload(reader: reader, imageLength: imageLength)
             try reader.seek(to: payloadStart + imageLength)
+            return coverData
         }
+    }
+
+    static func readCoverPayload(reader: BinaryReader, imageLength: UInt64) throws -> Data? {
+        guard imageLength > 0 else {
+            return nil
+        }
+        guard imageLength <= UInt64(maxCoverBytes) else {
+            try reader.seekForward(imageLength)
+            return nil
+        }
+        return try reader.read(count: Int(imageLength))
     }
 
     static func aes128ECBDecrypt(_ data: Data, key: Data) throws -> Data {
@@ -521,6 +568,49 @@ enum NCMConverterCore {
         return names.joined(separator: "、")
     }
 
+    static func albumName(from metadata: [String: Any]) -> String {
+        let raw = metadata["album"]
+        if let name = raw as? String {
+            return name
+        }
+        if let values = raw as? [Any], let name = values.first as? String {
+            return name
+        }
+        if let dictionary = raw as? [String: Any], let name = dictionary["name"] as? String {
+            return name
+        }
+        return ""
+    }
+
+    static func writeCoverFile(_ coverData: Data?, to directory: URL) throws -> URL? {
+        guard let coverData, !coverData.isEmpty,
+              let fileExtension = coverFileExtension(coverData) else {
+            return nil
+        }
+        let url = directory.appendingPathComponent("cover").appendingPathExtension(fileExtension)
+        try coverData.write(to: url, options: .atomic)
+        return url
+    }
+
+    static func coverFileExtension(_ data: Data) -> String? {
+        let bytes = [UInt8](data.prefix(12))
+        if bytes.count >= 3, bytes[0] == 0xFF, bytes[1] == 0xD8, bytes[2] == 0xFF {
+            return "jpg"
+        }
+        if bytes.count >= 8, bytes[0...7].elementsEqual([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]) {
+            return "png"
+        }
+        if data.starts(withASCII: "GIF87a") || data.starts(withASCII: "GIF89a") {
+            return "gif"
+        }
+        if bytes.count >= 12,
+           Data(bytes[0..<4]).starts(withASCII: "RIFF"),
+           Data(bytes[8..<12]).starts(withASCII: "WEBP") {
+            return "webp"
+        }
+        return nil
+    }
+
     static func safeFilename(_ name: String) -> String {
         let invalid = CharacterSet(charactersIn: "/\\:*?\"<>|")
         let parts = name.unicodeScalars.map { invalid.contains($0) ? "_" : Character($0) }
@@ -583,18 +673,55 @@ enum NCMConverterCore {
         return nil
     }
 
-    static func transcodeToMP3(inputURL: URL, outputURL: URL, ffmpegPath: String) throws {
+    static func transcodeToMP3(
+        inputURL: URL,
+        outputURL: URL,
+        ffmpegPath: String,
+        metadata: [String: Any],
+        coverURL: URL?,
+        copyAudio: Bool
+    ) throws {
+        var arguments = [
+            "-hide_banner",
+            "-loglevel", "error",
+            "-y",
+            "-i", inputURL.path
+        ]
+        if let coverURL {
+            arguments.append(contentsOf: ["-i", coverURL.path])
+        }
+        arguments.append(contentsOf: ["-map", "0:a:0", "-map_metadata", "0"])
+        if coverURL != nil {
+            arguments.append(contentsOf: ["-map", "1:v:0"])
+        }
+        if copyAudio {
+            arguments.append(contentsOf: ["-codec:a", "copy"])
+        } else {
+            arguments.append(contentsOf: ["-codec:a", "libmp3lame", "-q:a", "2"])
+        }
+        if coverURL != nil {
+            arguments.append(contentsOf: [
+                "-codec:v", "mjpeg",
+                "-pix_fmt", "yuvj420p",
+                "-q:v", "2",
+                "-frames:v", "1",
+                "-disposition:v:0", "attached_pic",
+                "-metadata:s:v", "title=Album cover",
+                "-metadata:s:v", "comment=Cover (front)"
+            ])
+        }
+
+        let title = (metadata["musicName"] as? String) ?? (metadata["name"] as? String) ?? ""
+        let artist = artistNames(from: metadata)
+        let album = albumName(from: metadata)
+        for (key, value) in [("title", title), ("artist", artist), ("album", album)] where !value.isEmpty {
+            arguments.append(contentsOf: ["-metadata", "\(key)=\(value)"])
+        }
+        arguments.append(contentsOf: ["-id3v2_version", "3", "-write_id3v1", "1", outputURL.path])
+
         let result = try ProcessRunner.run(
             ffmpegPath,
-            arguments: [
-                "-hide_banner",
-                "-loglevel", "error",
-                "-y",
-                "-i", inputURL.path,
-                "-codec:a", "libmp3lame",
-                "-q:a", "2",
-                outputURL.path
-            ]
+            arguments: arguments
         )
         guard result.status == 0 else {
             let detail = String(data: result.stderr, encoding: .utf8) ?? "\(result.status)"

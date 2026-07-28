@@ -5,9 +5,9 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 WINDOWS_DIR="$ROOT_DIR/windows"
 BUILD_DIR="$ROOT_DIR/.build/windows-native"
 PUBLISH_DIR="$ROOT_DIR/dist/windows/app"
-OUTPUT_FILE="$ROOT_DIR/dist/windows/NCM-Batch-MP3-Setup-1.2.0-x64.exe"
+OUTPUT_FILE="$ROOT_DIR/dist/windows/NCM-Batch-MP3-Setup-1.2.1-x64.exe"
 WIN_FFMPEG="$WINDOWS_DIR/resources/win/ffmpeg.exe"
-VERSION="1.2.0"
+VERSION="1.2.1"
 
 DOTNET_BIN="${DOTNET_BIN:-$ROOT_DIR/.build/dotnet/dotnet}"
 if [[ ! -x "$DOTNET_BIN" ]]; then

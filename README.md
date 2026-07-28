@@ -16,6 +16,7 @@
 - 用歌曲信息命名
 - 同名文件覆盖开关
 - 优先输出 MP3 / 保留原始格式
+- MP3 自动写入 NCM 内嵌封面、标题、歌手和专辑标签
 - 队列状态、进度条、日志
 - macOS / Windows 均提供队列前的原生“开始使用教程”
 - 启动时自动检测 GitHub Release 新版本，也可手动检查并跳转下载
@@ -26,8 +27,8 @@
 
 Release 会提供 macOS 常见拖拽安装 DMG 和 Windows 安装器：
 
-- `NCM批量转MP3-1.2.0-macOS-arm64.dmg`
-- `NCM-Batch-MP3-Setup-1.2.0-x64.exe`
+- `NCM批量转MP3-1.2.1-macOS-arm64.dmg`
+- `NCM-Batch-MP3-Setup-1.2.1-x64.exe`
 
 macOS 打开 DMG 后，把 `NCM批量转MP3.app` 拖到 `Applications` 即可。
 
@@ -44,10 +45,11 @@ xattr -cr NCM批量转MP3.app
 1. 校验 NCM 文件头 `CTENFDAM`
 2. 解密 core key 和 meta key
 3. 构造 key-box
-4. 定位封面区后的音频流
+4. 读取 NCM 内嵌封面并定位后续音频流
 5. 对音频流逐字节异或还原
 6. 识别真实音频头
-7. 如果源音频是 FLAC 且选择优先 MP3，调用内置 ffmpeg 转码
+7. 如果源音频不是 MP3 且选择优先 MP3，调用内置 ffmpeg 转码
+8. 将封面、标题、歌手和专辑写入 MP3 的 ID3 标签
 
 为避免生成打不开的伪 MP3，解密后的音频头如果无法识别，程序会直接报错。
 
@@ -67,7 +69,7 @@ xattr -cr NCM批量转MP3.app
 ```text
 dist/NCM批量转MP3.app
 dist/NCM批量转MP3-SwiftUI.app.zip
-dist/NCM批量转MP3-1.2.0-macOS-arm64.dmg
+dist/NCM批量转MP3-1.2.1-macOS-arm64.dmg
 ```
 
 构建脚本会优先使用已经存在的 `Resources/ffmpeg`。如果不存在，会尝试从 OSXExperts 下载 Apple Silicon ffmpeg 8.1。
@@ -85,7 +87,7 @@ Windows 版源码在 `windows/`，界面和转换核心均使用 C#，由 WPF �
 构建产物会输出到：
 
 ```text
-dist/windows/NCM-Batch-MP3-Setup-1.2.0-x64.exe
+dist/windows/NCM-Batch-MP3-Setup-1.2.1-x64.exe
 ```
 
 构建脚本会运行 C# 合成 NCM 往返测试、发布 `win-x64` WPF 应用，并将 `@ffmpeg-installer/win32-x64` 提供的 `ffmpeg.exe` 打入安装器。
