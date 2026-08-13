@@ -1,0 +1,23 @@
+# SwiftLint configuration for the macOS app.
+#
+# Layout and formatting are owned by swift-format (see .swift-format), so rules
+# that fight swift-format's canonical output are disabled here. SwiftLint is
+# used for structure and complexity checks only.
+
+disabled_rules:
+  # swift-format emits mandatory trailing commas; swiftlint's default disagrees.
+  - trailing_comma
+
+identifier_name:
+  min_length: 1 # allow j / c / i style names in the RC4-like keybox algorithm
+
+opening_brace:
+  # swift-format moves the opening brace of a multi-line condition to its own line.
+  ignore_multiline_statement_conditions: true
+
+type_body_length:
+  warning: 400 # root SwiftUI views and the converter core legitimately exceed 250
+  error: 600
+
+function_parameter_count:
+  warning: 6

@@ -4,6 +4,6 @@
   "indentation": {
     "spaces": 4
   },
-  "maximumBlankLines": 2,
+  "maximumBlankLines": 1,
   "respectsExistingLineBreaks": true
 }

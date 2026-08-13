@@ -22,55 +22,29 @@ enum CommandLineMode {
         }
     }
 
-    static func runCLI(arguments: [String]) -> Int32 {
+    private struct CLIArguments {
         var inputs: [URL] = []
         var outputDirectory = FileManager.default.currentDirectoryPath
         var mode: OutputMode = .preferMP3
         var rename = false
         var overwrite = false
+    }
 
-        var index = 0
-        while index < arguments.count {
-            let arg = arguments[index]
-            switch arg {
-            case "--output", "-o":
-                index += 1
-                guard index < arguments.count else {
-                    fputs("missing output directory\n", stderr)
-                    return 2
-                }
-                outputDirectory = arguments[index]
-            case "--mode":
-                index += 1
-                guard index < arguments.count else {
-                    fputs("missing mode\n", stderr)
-                    return 2
-                }
-                mode = arguments[index] == "original" ? .original : .preferMP3
-            case "--rename":
-                rename = true
-            case "--overwrite":
-                overwrite = true
-            default:
-                inputs.append(URL(fileURLWithPath: arg))
-            }
-            index += 1
-        }
-
-        guard !inputs.isEmpty else {
+    static func runCLI(arguments: [String]) -> Int32 {
+        guard let parsed = parseCLIArguments(arguments), !parsed.inputs.isEmpty else {
             fputs("usage: NCMConverter --cli-convert file.ncm [...] --output outdir [--rename] [--overwrite]\n", stderr)
             return 2
         }
 
         let options = ConversionOptions(
-            outputDirectory: URL(fileURLWithPath: outputDirectory, isDirectory: true),
-            outputMode: mode,
-            renameByMetadata: rename,
-            overwriteExisting: overwrite
+            outputDirectory: URL(fileURLWithPath: parsed.outputDirectory, isDirectory: true),
+            outputMode: parsed.mode,
+            renameByMetadata: parsed.rename,
+            overwriteExisting: parsed.overwrite
         )
 
         var failed = 0
-        for input in inputs {
+        for input in parsed.inputs {
             do {
                 let result = try NCMConverterCore.convertOne(inputURL: input, options: options)
                 print("OK \(input.lastPathComponent) -> \(result.outputURL.lastPathComponent)")
@@ -80,6 +54,38 @@ enum CommandLineMode {
             }
         }
         return failed == 0 ? 0 : 1
+    }
+
+    private static func parseCLIArguments(_ arguments: [String]) -> CLIArguments? {
+        var parsed = CLIArguments()
+        var index = 0
+        while index < arguments.count {
+            let arg = arguments[index]
+            switch arg {
+            case "--output", "-o":
+                index += 1
+                guard index < arguments.count else {
+                    fputs("missing output directory\n", stderr)
+                    return nil
+                }
+                parsed.outputDirectory = arguments[index]
+            case "--mode":
+                index += 1
+                guard index < arguments.count else {
+                    fputs("missing mode\n", stderr)
+                    return nil
+                }
+                parsed.mode = arguments[index] == "original" ? .original : .preferMP3
+            case "--rename":
+                parsed.rename = true
+            case "--overwrite":
+                parsed.overwrite = true
+            default:
+                parsed.inputs.append(URL(fileURLWithPath: arg))
+            }
+            index += 1
+        }
+        return parsed
     }
 }
 
