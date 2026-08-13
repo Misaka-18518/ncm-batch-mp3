@@ -131,15 +131,26 @@ enum ProcessRunner {
             inputPipe = nil
         }
 
+        // Drain stdout/stderr concurrently: a child that fills a pipe buffer blocks on
+        // write, so reading only after waitUntilExit would deadlock.
+        var stdout = Data()
+        var stderr = Data()
+        let drainGroup = DispatchGroup()
+        DispatchQueue.global().async(group: drainGroup) {
+            stdout = outputPipe.fileHandleForReading.readDataToEndOfFile()
+        }
+        DispatchQueue.global().async(group: drainGroup) {
+            stderr = errorPipe.fileHandleForReading.readDataToEndOfFile()
+        }
+
         try process.run()
         if let input, let inputPipe {
             try inputPipe.fileHandleForWriting.write(contentsOf: input)
             try inputPipe.fileHandleForWriting.close()
         }
         process.waitUntilExit()
+        drainGroup.wait()
 
-        let stdout = outputPipe.fileHandleForReading.readDataToEndOfFile()
-        let stderr = errorPipe.fileHandleForReading.readDataToEndOfFile()
         return ProcessResult(stdout: stdout, stderr: stderr, status: process.terminationStatus)
     }
 }
@@ -149,7 +160,9 @@ extension Data {
         var bytes: [UInt8] = []
         var index = hexString.startIndex
         while index < hexString.endIndex {
-            let next = hexString.index(index, offsetBy: 2)
+            guard let next = hexString.index(index, offsetBy: 2, limitedBy: hexString.endIndex) else {
+                break
+            }
             let byteString = String(hexString[index..<next])
             bytes.append(UInt8(byteString, radix: 16) ?? 0)
             index = next
@@ -253,7 +266,7 @@ enum NCMConverterCore {
             let target = try uniqueURL(
                 options.outputDirectory.appendingPathComponent(stem).appendingPathExtension(extraction.sourceFormat),
                 overwrite: options.overwriteExisting)
-            if extraction.sourceFormat == "mp3", let ffmpeg = findFFmpeg(), coverURL != nil {
+            if extraction.sourceFormat == "mp3", let ffmpeg = cachedFFmpegPath, coverURL != nil {
                 try transcodeToMP3(
                     inputURL: tempAudioURL,
                     outputURL: target,
@@ -276,7 +289,7 @@ enum NCMConverterCore {
             let target = try uniqueURL(
                 options.outputDirectory.appendingPathComponent(stem).appendingPathExtension("mp3"),
                 overwrite: options.overwriteExisting)
-            if let ffmpeg = findFFmpeg(), coverURL != nil {
+            if let ffmpeg = cachedFFmpegPath, coverURL != nil {
                 try transcodeToMP3(
                     inputURL: tempAudioURL,
                     outputURL: target,
@@ -294,7 +307,7 @@ enum NCMConverterCore {
                 inputURL: inputURL, outputURL: target, sourceFormat: "mp3", transcoded: false, message: "已转换为 MP3")
         }
 
-        if let ffmpeg = findFFmpeg() {
+        if let ffmpeg = cachedFFmpegPath {
             let target = try uniqueURL(
                 options.outputDirectory.appendingPathComponent(stem).appendingPathExtension("mp3"),
                 overwrite: options.overwriteExisting)
@@ -674,6 +687,8 @@ enum NCMConverterCore {
         try FileManager.default.moveItem(at: source, to: target)
     }
 
+    static let cachedFFmpegPath: String? = findFFmpeg()
+
     static func findFFmpeg() -> String? {
         if let bundled = Bundle.main.resourceURL?.appendingPathComponent("ffmpeg").path,
             FileManager.default.isExecutableFile(atPath: bundled)
@@ -754,6 +769,7 @@ enum NCMConverterCore {
         )
         guard result.status == 0 else {
             let detail = String(data: result.stderr, encoding: .utf8) ?? "\(result.status)"
+            try? FileManager.default.removeItem(at: outputURL)
             throw NCMConversionError.process(
                 "ffmpeg 转 MP3 失败：\(detail.trimmingCharacters(in: .whitespacesAndNewlines))")
         }
@@ -926,7 +942,7 @@ final class AppModel: ObservableObject {
     }
 
     var ffmpegStatusText: String {
-        NCMConverterCore.findFFmpeg() == nil ? "未检测到 ffmpeg" : "ffmpeg 可用"
+        NCMConverterCore.cachedFFmpegPath == nil ? "未检测到 ffmpeg" : "ffmpeg 可用"
     }
 
     var queuedCount: Int {
@@ -1023,6 +1039,10 @@ final class AppModel: ObservableObject {
     }
 
     func addURLs(_ urls: [URL]) {
+        guard !isConverting else {
+            appendLog("转换进行中，暂时不能添加文件")
+            return
+        }
         let discovered = collectNCMFiles(from: urls)
         let existing = Set(items.map { $0.url.standardizedFileURL })
         var added = 0
@@ -1114,7 +1134,7 @@ final class AppModel: ObservableObject {
         }
 
         appendLog("开始转换 \(files.count) 个文件")
-        if NCMConverterCore.findFFmpeg() == nil {
+        if NCMConverterCore.cachedFFmpegPath == nil {
             appendLog("未检测到 ffmpeg；FLAC 源会导出为 FLAC")
         }
 
@@ -1474,6 +1494,7 @@ struct ContentView: View {
                     .labelStyle(.titleAndIcon)
             }
             .liquidButton()
+            .disabled(model.isConverting)
             .help("添加 .ncm 文件")
 
             Button(action: model.chooseFolder) {
@@ -1481,6 +1502,7 @@ struct ContentView: View {
                     .labelStyle(.titleAndIcon)
             }
             .liquidButton()
+            .disabled(model.isConverting)
             .help("扫描文件夹里的 .ncm 文件")
 
             Button(action: model.removeSelected) {
