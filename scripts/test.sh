@@ -7,10 +7,10 @@ if [[ ! -x "$ROOT_DIR/dist/NCM批量转MP3.app/Contents/MacOS/NCMConverter" ]]; 
   "$ROOT_DIR/scripts/build_app.sh"
 fi
 
-python3 -m py_compile "$ROOT_DIR/tests/synthetic_ncm_test.py" "$ROOT_DIR/tests/ffmpeg_integration_test.py"
+python3 -m py_compile "$ROOT_DIR/tests/macos/synthetic_ncm_test.py" "$ROOT_DIR/tests/macos/ffmpeg_integration_test.py"
 "$ROOT_DIR/dist/NCM批量转MP3.app/Contents/MacOS/NCMConverter" --self-test
-python3 "$ROOT_DIR/tests/synthetic_ncm_test.py"
-python3 "$ROOT_DIR/tests/ffmpeg_integration_test.py"
+python3 "$ROOT_DIR/tests/macos/synthetic_ncm_test.py"
+python3 "$ROOT_DIR/tests/macos/ffmpeg_integration_test.py"
 
 DOTNET_BIN="${DOTNET_BIN:-$ROOT_DIR/.build/dotnet/dotnet}"
 if [[ ! -x "$DOTNET_BIN" ]]; then
@@ -21,7 +21,7 @@ if [[ -n "$DOTNET_BIN" ]]; then
   NUGET_PACKAGES="$ROOT_DIR/.build/nuget" \
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 \
   "$DOTNET_BIN" run \
-    --project "$ROOT_DIR/windows/NcmBatchMp3.Tests/NcmBatchMp3.Tests.csproj" \
+    --project "$ROOT_DIR/apps/windows/NcmBatchMp3.Tests/NcmBatchMp3.Tests.csproj" \
     --configuration Release \
     --nologo
 fi

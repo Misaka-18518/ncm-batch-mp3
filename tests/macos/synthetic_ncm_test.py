@@ -8,7 +8,7 @@ from pathlib import Path
 from ncm_fixture import build_key_box, build_ncm
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 APP_BIN = ROOT / "dist" / "NCM批量转MP3.app" / "Contents" / "MacOS" / "NCMConverter"
 
 
