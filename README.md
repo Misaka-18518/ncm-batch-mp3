@@ -30,6 +30,8 @@ Release 会提供 macOS 常见拖拽安装 DMG 和 Windows 安装器：
 - `NCM批量转MP3-1.2.1-macOS-arm64.dmg`
 - `NCM-Batch-MP3-Setup-1.2.1-x64.exe`
 
+所有构建产物（含 SwiftUI 版 zip）会作为附件挂在 GitHub Release 上，仓库不跟踪二进制产物。
+
 macOS 打开 DMG 后，把 `NCM批量转MP3.app` 拖到 `Applications` 即可。
 
 如果 macOS 提示无法打开，可以右键 App 选择“打开”，或在终端执行：

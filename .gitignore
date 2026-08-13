@@ -9,8 +9,8 @@ apps/macos/assets/ffmpeg
 apps/macos/assets/ffmpeg*.zip
 dist/*.app/
 dist/*.dmg
+dist/*.zip
 dist/*.tar.gz
-!dist/NCM批量转MP3-SwiftUI.app.zip
 apps/windows/node_modules/
 apps/windows/**/bin/
 apps/windows/**/obj/
