@@ -145,8 +145,14 @@ public partial class MainWindow : Window
                     continue;
                 }
 
-                var searchOption = recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-                foreach (var file in Directory.EnumerateFiles(candidate, "*.ncm", searchOption))
+                var options = new EnumerationOptions
+                {
+                    RecurseSubdirectories = recursive,
+                    IgnoreInaccessible = true,
+                    // Skip junctions and symlinks so a directory cycle cannot loop forever.
+                    AttributesToSkip = FileAttributes.ReparsePoint
+                };
+                foreach (var file in Directory.EnumerateFiles(candidate, "*.ncm", options))
                 {
                     results.Add(Path.GetFullPath(file));
                 }
