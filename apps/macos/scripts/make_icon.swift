@@ -19,7 +19,7 @@ let variants: [IconVariant] = [
     .init(name: "icon_256x256.png", pixels: 256),
     .init(name: "icon_256x256@2x.png", pixels: 512),
     .init(name: "icon_512x512.png", pixels: 512),
-    .init(name: "icon_512x512@2x.png", pixels: 1024)
+    .init(name: "icon_512x512@2x.png", pixels: 1024),
 ]
 
 func c(_ red: CGFloat, _ green: CGFloat, _ blue: CGFloat, _ alpha: CGFloat = 1) -> NSColor {
@@ -35,7 +35,7 @@ func drawText(_ text: String, pixels: CGFloat, center: NSPoint, size: CGFloat, w
     let string = text as NSString
     let attrs: [NSAttributedString.Key: Any] = [
         .font: NSFont.monospacedSystemFont(ofSize: size, weight: weight),
-        .foregroundColor: color
+        .foregroundColor: color,
     ]
     let textSize = string.size(withAttributes: attrs)
     string.draw(
@@ -99,7 +99,7 @@ for variant in variants {
     let note = "♪" as NSString
     let noteAttrs: [NSAttributedString.Key: Any] = [
         .font: NSFont.systemFont(ofSize: p * 0.20, weight: .bold),
-        .foregroundColor: c(0.10, 0.10, 0.10, 0.96)
+        .foregroundColor: c(0.10, 0.10, 0.10, 0.96),
     ]
     let noteSize = note.size(withAttributes: noteAttrs)
     if p >= 64 {
@@ -116,7 +116,9 @@ for variant in variants {
     c(0.10, 0.10, 0.10, 0.92).setStroke()
     filePath.lineWidth = max(1, p * 0.012)
     filePath.stroke()
-    drawText("MP3", pixels: p, center: NSPoint(x: fileRect.midX, y: fileRect.midY), size: p * 0.050, weight: .heavy, color: c(0.10, 0.10, 0.10))
+    drawText(
+        "MP3", pixels: p, center: NSPoint(x: fileRect.midX, y: fileRect.midY), size: p * 0.050, weight: .heavy,
+        color: c(0.10, 0.10, 0.10))
 
     drawArrow(
         from: NSPoint(x: p * 0.48, y: p * 0.49),
@@ -128,8 +130,9 @@ for variant in variants {
     image.unlockFocus()
 
     guard let tiff = image.tiffRepresentation,
-          let bitmap = NSBitmapImageRep(data: tiff),
-          let png = bitmap.representation(using: .png, properties: [:]) else {
+        let bitmap = NSBitmapImageRep(data: tiff),
+        let png = bitmap.representation(using: .png, properties: [:])
+    else {
         fatalError("Could not render icon")
     }
     try png.write(to: output.appendingPathComponent(variant.name))
