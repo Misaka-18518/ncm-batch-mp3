@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-WINDOWS_DIR="$ROOT_DIR/windows"
+WINDOWS_DIR="$ROOT_DIR/apps/windows"
 BUILD_DIR="$ROOT_DIR/.build/windows-native"
 PUBLISH_DIR="$ROOT_DIR/dist/windows/app"
 OUTPUT_FILE="$ROOT_DIR/dist/windows/NCM-Batch-MP3-Setup-1.2.1-x64.exe"

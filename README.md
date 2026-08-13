@@ -53,6 +53,18 @@ xattr -cr NCM批量转MP3.app
 
 为避免生成打不开的伪 MP3，解密后的音频头如果无法识别，程序会直接报错。
 
+## 项目结构
+
+```text
+apps/
+├── macos/          # macOS SwiftUI 应用（源码、Info.plist、图标脚本、ffmpeg 资源）
+└── windows/        # Windows 原生 WPF 应用（App / Core / Tests 三项目、安装器）
+scripts/            # 跨平台构建与测试编排脚本
+tests/macos/        # macOS 端测试（合成 NCM roundtrip、ffmpeg 集成、封面写入）
+.github/workflows/  # Windows 原生版 CI
+dist/               # 构建产物（DMG、安装器、SwiftUI 应用 zip）
+```
+
 ## 从源码构建
 
 ### macOS
@@ -72,11 +84,11 @@ dist/NCM批量转MP3-SwiftUI.app.zip
 dist/NCM批量转MP3-1.2.1-macOS-arm64.dmg
 ```
 
-构建脚本会优先使用已经存在的 `Resources/ffmpeg`。如果不存在，会尝试从 OSXExperts 下载 Apple Silicon ffmpeg 8.1。
+构建脚本会优先使用已经存在的 `apps/macos/assets/ffmpeg`。如果不存在，会尝试从 OSXExperts 下载 Apple Silicon ffmpeg 8.1。
 
 ### Windows
 
-Windows 版源码在 `windows/`，界面和转换核心均使用 C#，由 WPF 生成原生 x64 桌面程序，再用 NSIS 打包。发布配置为 self-contained，用户无需另装 .NET 或 ffmpeg。
+Windows 版源码在 `apps/windows/`，界面和转换核心均使用 C#，由 WPF 生成原生 x64 桌面程序，再用 NSIS 打包。发布配置为 self-contained，用户无需另装 .NET 或 ffmpeg。
 
 需要 .NET 8 SDK 和 NSIS：
 
@@ -111,11 +123,11 @@ dist/windows/NCM-Batch-MP3-Setup-1.2.1-x64.exe
 
 - 来源：https://osxexperts.net/
 - 下载后二进制 SHA256：`9a08d61f9328e8164ba560ee7a79958e357307fcfeea6fe626b7d66cdc287028`
-- 签进 App 后 SHA256 会变化，详见 `Resources/FFMPEG_NOTICE.txt`
+- 签进 App 后 SHA256 会变化，详见 `apps/macos/assets/FFMPEG_NOTICE.txt`
 
 该 ffmpeg 构建启用了 `--enable-gpl`。本项目采用 GPLv3-or-later 发布。
 
-Windows 原生版内置 `@ffmpeg-installer/win32-x64` 提供的 `ffmpeg.exe`，详见 `windows/resources/FFMPEG_WINDOWS_NOTICE.txt`。
+Windows 原生版内置 `@ffmpeg-installer/win32-x64` 提供的 `ffmpeg.exe`，详见 `apps/windows/resources/FFMPEG_WINDOWS_NOTICE.txt`。
 
 ## 免责声明
 

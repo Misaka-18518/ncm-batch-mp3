@@ -22,7 +22,7 @@ swiftc \
   -parse-as-library \
   -O \
   -o "$BUILD_DIR/NCMConverter" \
-  "$ROOT_DIR/Sources/NCMBatchMP3App.swift" \
+  "$ROOT_DIR/apps/macos/Sources/NCMBatchMP3App.swift" \
   -framework SwiftUI \
   -framework AppKit \
   -framework Combine \
@@ -32,7 +32,7 @@ echo "Preparing app bundle..."
 rm -rf "$APP_PATH"
 mkdir -p "$APP_PATH/Contents/MacOS" "$RESOURCES"
 cp "$BUILD_DIR/NCMConverter" "$EXECUTABLE"
-cp "$ROOT_DIR/Info.plist" "$APP_PATH/Contents/Info.plist"
+cp "$ROOT_DIR/apps/macos/Info.plist" "$APP_PATH/Contents/Info.plist"
 printf 'APPL????' > "$APP_PATH/Contents/PkgInfo"
 chmod +x "$EXECUTABLE"
 
@@ -43,14 +43,14 @@ MACOSX_DEPLOYMENT_TARGET=15.0 \
 swiftc \
   -target arm64-apple-macosx15.0 \
   -o "$BUILD_DIR/make_icon" \
-  "$ROOT_DIR/scripts/make_icon.swift" \
+  "$ROOT_DIR/apps/macos/scripts/make_icon.swift" \
   -framework AppKit
 "$BUILD_DIR/make_icon" "$BUILD_DIR/AppIcon.iconset"
-python3 "$ROOT_DIR/scripts/make_icns.py" "$BUILD_DIR/AppIcon.iconset" "$RESOURCES/AppIcon.icns"
+python3 "$ROOT_DIR/apps/macos/scripts/make_icns.py" "$BUILD_DIR/AppIcon.iconset" "$RESOURCES/AppIcon.icns"
 
 echo "Preparing ffmpeg..."
-if [[ -x "$ROOT_DIR/Resources/ffmpeg" ]]; then
-  cp "$ROOT_DIR/Resources/ffmpeg" "$RESOURCES/ffmpeg"
+if [[ -x "$ROOT_DIR/apps/macos/assets/ffmpeg" ]]; then
+  cp "$ROOT_DIR/apps/macos/assets/ffmpeg" "$RESOURCES/ffmpeg"
 else
   curl -L "$FFMPEG_URL" -o "$BUILD_DIR/ffmpeg81arm.zip"
   rm -rf "$BUILD_DIR/ffmpeg81arm"
@@ -64,7 +64,7 @@ else
 fi
 chmod +x "$RESOURCES/ffmpeg"
 
-cp "$ROOT_DIR/Resources/FFMPEG_NOTICE.txt" "$RESOURCES/FFMPEG_NOTICE.txt"
+cp "$ROOT_DIR/apps/macos/assets/FFMPEG_NOTICE.txt" "$RESOURCES/FFMPEG_NOTICE.txt"
 cp "$ROOT_DIR/README.md" "$RESOURCES/README.md"
 
 echo "Signing..."

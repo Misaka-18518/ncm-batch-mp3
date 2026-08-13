@@ -8,7 +8,7 @@ from pathlib import Path
 from ncm_fixture import build_ncm
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 APP = ROOT / "dist" / "NCM批量转MP3.app"
 APP_BIN = APP / "Contents" / "MacOS" / "NCMConverter"
 BUNDLED_FFMPEG = APP / "Contents" / "Resources" / "ffmpeg"

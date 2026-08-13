@@ -5,9 +5,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 
-ROOT = Path(__file__).resolve().parents[2]
-ASSETS = ROOT / "windows" / "assets"
-MAC_ICON = ROOT / ".build" / "AppIcon.iconset" / "icon_512x512.png"
+ASSETS = Path(__file__).resolve().parents[1] / "assets"
+MAC_ICON = Path(__file__).resolve().parents[3] / ".build" / "AppIcon.iconset" / "icon_512x512.png"
 
 
 def fallback_icon(size: int = 1024) -> Image.Image:
