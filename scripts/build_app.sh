@@ -22,7 +22,7 @@ swiftc \
   -parse-as-library \
   -O \
   -o "$BUILD_DIR/NCMConverter" \
-  "$ROOT_DIR/apps/macos/Sources/NCMBatchMP3App.swift" \
+  "$ROOT_DIR/apps/macos/Sources/"*.swift \
   -framework SwiftUI \
   -framework AppKit \
   -framework Combine \
