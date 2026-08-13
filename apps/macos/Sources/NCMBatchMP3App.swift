@@ -96,10 +96,10 @@ enum NCMConversionError: LocalizedError {
         case .invalidNCM:
             return "不是有效的 .ncm 文件"
         case .incompleteFile(let message),
-             .crypto(let message),
-             .metadata(let message),
-             .output(let message),
-             .process(let message):
+            .crypto(let message),
+            .metadata(let message),
+            .output(let message),
+            .process(let message):
             return message
         }
     }
@@ -245,11 +245,14 @@ enum NCMConverterCore {
         if extraction.sourceFormat == "unknown" {
             throw NCMConversionError.output("解密后的音频头无法识别，已停止输出，避免生成无法播放的文件")
         }
-        let stem = outputStem(inputURL: inputURL, metadata: extraction.metadata, renameByMetadata: options.renameByMetadata)
+        let stem = outputStem(
+            inputURL: inputURL, metadata: extraction.metadata, renameByMetadata: options.renameByMetadata)
         let coverURL = try writeCoverFile(extraction.coverData, to: tempDirectory)
 
         if options.outputMode == .original {
-            let target = try uniqueURL(options.outputDirectory.appendingPathComponent(stem).appendingPathExtension(extraction.sourceFormat), overwrite: options.overwriteExisting)
+            let target = try uniqueURL(
+                options.outputDirectory.appendingPathComponent(stem).appendingPathExtension(extraction.sourceFormat),
+                overwrite: options.overwriteExisting)
             if extraction.sourceFormat == "mp3", let ffmpeg = findFFmpeg(), coverURL != nil {
                 try transcodeToMP3(
                     inputURL: tempAudioURL,
@@ -259,14 +262,20 @@ enum NCMConverterCore {
                     coverURL: coverURL,
                     copyAudio: true
                 )
-                return ConversionResult(inputURL: inputURL, outputURL: target, sourceFormat: "mp3", transcoded: false, message: "已导出 MP3（含封面）")
+                return ConversionResult(
+                    inputURL: inputURL, outputURL: target, sourceFormat: "mp3", transcoded: false,
+                    message: "已导出 MP3（含封面）")
             }
             try moveReplacingIfNeeded(from: tempAudioURL, to: target, overwrite: options.overwriteExisting)
-            return ConversionResult(inputURL: inputURL, outputURL: target, sourceFormat: extraction.sourceFormat, transcoded: false, message: "已导出原始音频")
+            return ConversionResult(
+                inputURL: inputURL, outputURL: target, sourceFormat: extraction.sourceFormat, transcoded: false,
+                message: "已导出原始音频")
         }
 
         if extraction.sourceFormat == "mp3" {
-            let target = try uniqueURL(options.outputDirectory.appendingPathComponent(stem).appendingPathExtension("mp3"), overwrite: options.overwriteExisting)
+            let target = try uniqueURL(
+                options.outputDirectory.appendingPathComponent(stem).appendingPathExtension("mp3"),
+                overwrite: options.overwriteExisting)
             if let ffmpeg = findFFmpeg(), coverURL != nil {
                 try transcodeToMP3(
                     inputURL: tempAudioURL,
@@ -276,14 +285,19 @@ enum NCMConverterCore {
                     coverURL: coverURL,
                     copyAudio: true
                 )
-                return ConversionResult(inputURL: inputURL, outputURL: target, sourceFormat: "mp3", transcoded: false, message: "已转换为 MP3（含封面）")
+                return ConversionResult(
+                    inputURL: inputURL, outputURL: target, sourceFormat: "mp3", transcoded: false,
+                    message: "已转换为 MP3（含封面）")
             }
             try moveReplacingIfNeeded(from: tempAudioURL, to: target, overwrite: options.overwriteExisting)
-            return ConversionResult(inputURL: inputURL, outputURL: target, sourceFormat: "mp3", transcoded: false, message: "已转换为 MP3")
+            return ConversionResult(
+                inputURL: inputURL, outputURL: target, sourceFormat: "mp3", transcoded: false, message: "已转换为 MP3")
         }
 
         if let ffmpeg = findFFmpeg() {
-            let target = try uniqueURL(options.outputDirectory.appendingPathComponent(stem).appendingPathExtension("mp3"), overwrite: options.overwriteExisting)
+            let target = try uniqueURL(
+                options.outputDirectory.appendingPathComponent(stem).appendingPathExtension("mp3"),
+                overwrite: options.overwriteExisting)
             try transcodeToMP3(
                 inputURL: tempAudioURL,
                 outputURL: target,
@@ -292,10 +306,14 @@ enum NCMConverterCore {
                 coverURL: coverURL,
                 copyAudio: false
             )
-            return ConversionResult(inputURL: inputURL, outputURL: target, sourceFormat: extraction.sourceFormat, transcoded: true, message: "已从 \(extraction.sourceFormat.uppercased()) 转码为 MP3")
+            return ConversionResult(
+                inputURL: inputURL, outputURL: target, sourceFormat: extraction.sourceFormat, transcoded: true,
+                message: "已从 \(extraction.sourceFormat.uppercased()) 转码为 MP3")
         }
 
-        let target = try uniqueURL(options.outputDirectory.appendingPathComponent(stem).appendingPathExtension(extraction.sourceFormat), overwrite: options.overwriteExisting)
+        let target = try uniqueURL(
+            options.outputDirectory.appendingPathComponent(stem).appendingPathExtension(extraction.sourceFormat),
+            overwrite: options.overwriteExisting)
         try moveReplacingIfNeeded(from: tempAudioURL, to: target, overwrite: options.overwriteExisting)
         return ConversionResult(
             inputURL: inputURL,
@@ -306,7 +324,9 @@ enum NCMConverterCore {
         )
     }
 
-    static func extractNCM(inputURL: URL, outputURL: URL) throws -> (metadata: [String: Any], sourceFormat: String, coverData: Data?) {
+    static func extractNCM(inputURL: URL, outputURL: URL) throws -> (
+        metadata: [String: Any], sourceFormat: String, coverData: Data?
+    ) {
         let reader = try BinaryReader(url: inputURL)
         let fileSize = try FileManager.default.attributesOfItem(atPath: inputURL.path)[.size] as? UInt64 ?? 0
         let header = try readHeader(reader: reader, fileSize: fileSize)
@@ -373,7 +393,8 @@ enum NCMConverterCore {
             let payloadStart = try reader.offset()
 
             guard imageLength <= coverFrameLength,
-                  payloadStart + coverFrameLength <= fileSize else {
+                payloadStart + coverFrameLength <= fileSize
+            else {
                 throw NCMConversionError.incompleteFile("封面长度字段异常，无法定位音频数据")
             }
 
@@ -420,7 +441,8 @@ enum NCMConverterCore {
         )
         guard result.status == 0 else {
             let detail = String(data: result.stderr, encoding: .utf8) ?? "\(result.status)"
-            throw NCMConversionError.crypto("openssl AES 解密失败：\(detail.trimmingCharacters(in: .whitespacesAndNewlines))")
+            throw NCMConversionError.crypto(
+                "openssl AES 解密失败：\(detail.trimmingCharacters(in: .whitespacesAndNewlines))")
         }
         return try pkcs7Unpad(result.stdout)
     }
@@ -433,7 +455,8 @@ enum NCMConverterCore {
         )
         guard result.status == 0 else {
             let detail = String(data: result.stderr, encoding: .utf8) ?? "\(result.status)"
-            throw NCMConversionError.crypto("openssl AES 加密失败：\(detail.trimmingCharacters(in: .whitespacesAndNewlines))")
+            throw NCMConversionError.crypto(
+                "openssl AES 加密失败：\(detail.trimmingCharacters(in: .whitespacesAndNewlines))")
         }
         return result.stdout
     }
@@ -468,7 +491,8 @@ enum NCMConverterCore {
                 text.removeFirst(6)
             }
             guard let jsonData = text.data(using: .utf8),
-                  let object = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
+                let object = try JSONSerialization.jsonObject(with: jsonData) as? [String: Any]
+            else {
                 throw NCMConversionError.metadata("歌曲信息 JSON 解析失败")
             }
             return object
@@ -523,8 +547,9 @@ enum NCMConverterCore {
             return "ogg"
         }
         if bytes.count >= 12,
-           Data(bytes[0..<4]).starts(withASCII: "RIFF"),
-           Data(bytes[8..<12]).starts(withASCII: "WAVE") {
+            Data(bytes[0..<4]).starts(withASCII: "RIFF"),
+            Data(bytes[8..<12]).starts(withASCII: "WAVE")
+        {
             return "wav"
         }
         return "unknown"
@@ -535,7 +560,8 @@ enum NCMConverterCore {
             return safeFilename(inputURL.deletingPathExtension().lastPathComponent)
         }
 
-        let title = (metadata["musicName"] as? String)
+        let title =
+            (metadata["musicName"] as? String)
             ?? (metadata["name"] as? String)
             ?? inputURL.deletingPathExtension().lastPathComponent
         let artists = artistNames(from: metadata)
@@ -584,7 +610,8 @@ enum NCMConverterCore {
 
     static func writeCoverFile(_ coverData: Data?, to directory: URL) throws -> URL? {
         guard let coverData, !coverData.isEmpty,
-              let fileExtension = coverFileExtension(coverData) else {
+            let fileExtension = coverFileExtension(coverData)
+        else {
             return nil
         }
         let url = directory.appendingPathComponent("cover").appendingPathExtension(fileExtension)
@@ -604,8 +631,9 @@ enum NCMConverterCore {
             return "gif"
         }
         if bytes.count >= 12,
-           Data(bytes[0..<4]).starts(withASCII: "RIFF"),
-           Data(bytes[8..<12]).starts(withASCII: "WEBP") {
+            Data(bytes[0..<4]).starts(withASCII: "RIFF"),
+            Data(bytes[8..<12]).starts(withASCII: "WEBP")
+        {
             return "webp"
         }
         return nil
@@ -648,14 +676,15 @@ enum NCMConverterCore {
 
     static func findFFmpeg() -> String? {
         if let bundled = Bundle.main.resourceURL?.appendingPathComponent("ffmpeg").path,
-           FileManager.default.isExecutableFile(atPath: bundled) {
+            FileManager.default.isExecutableFile(atPath: bundled)
+        {
             return bundled
         }
 
         let candidates = [
             "/opt/homebrew/bin/ffmpeg",
             "/usr/local/bin/ffmpeg",
-            "/usr/bin/ffmpeg"
+            "/usr/bin/ffmpeg",
         ]
         for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
             return path
@@ -685,7 +714,7 @@ enum NCMConverterCore {
             "-hide_banner",
             "-loglevel", "error",
             "-y",
-            "-i", inputURL.path
+            "-i", inputURL.path,
         ]
         if let coverURL {
             arguments.append(contentsOf: ["-i", coverURL.path])
@@ -707,7 +736,7 @@ enum NCMConverterCore {
                 "-frames:v", "1",
                 "-disposition:v:0", "attached_pic",
                 "-metadata:s:v", "title=Album cover",
-                "-metadata:s:v", "comment=Cover (front)"
+                "-metadata:s:v", "comment=Cover (front)",
             ])
         }
 
@@ -725,7 +754,8 @@ enum NCMConverterCore {
         )
         guard result.status == 0 else {
             let detail = String(data: result.stderr, encoding: .utf8) ?? "\(result.status)"
-            throw NCMConversionError.process("ffmpeg 转 MP3 失败：\(detail.trimmingCharacters(in: .whitespacesAndNewlines))")
+            throw NCMConversionError.process(
+                "ffmpeg 转 MP3 失败：\(detail.trimmingCharacters(in: .whitespacesAndNewlines))")
         }
     }
 
@@ -767,7 +797,8 @@ struct UpdatePrompt: Identifiable {
 }
 
 enum ReleaseUpdateChecker {
-    private static let latestReleaseURL = URL(string: "https://api.github.com/repos/enshuwu46-png/ncm-batch-mp3/releases/latest")!
+    private static let latestReleaseURL = URL(
+        string: "https://api.github.com/repos/enshuwu46-png/ncm-batch-mp3/releases/latest")!
     private static let expectedReleasePrefix = "/enshuwu46-png/ncm-batch-mp3/releases/tag/"
 
     private struct LatestRelease: Decodable {
@@ -822,7 +853,8 @@ enum ReleaseUpdateChecker {
     }
 
     private static func versionParts(_ version: String) -> [Int]? {
-        let normalized = version
+        let normalized =
+            version
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "v", with: "", options: [.anchored, .caseInsensitive])
             .split(whereSeparator: { $0 == "-" || $0 == "+" })
@@ -1018,13 +1050,16 @@ final class AppModel: ObservableObject {
 
             if isDirectory.boolValue {
                 if recursiveFolderSearch {
-                    if let enumerator = fileManager.enumerator(at: url, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]) {
+                    if let enumerator = fileManager.enumerator(
+                        at: url, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles])
+                    {
                         for case let fileURL as URL in enumerator where fileURL.pathExtension.lowercased() == "ncm" {
                             result.append(fileURL)
                         }
                     }
                 } else {
-                    let children = (try? fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
+                    let children =
+                        (try? fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)) ?? []
                     result.append(contentsOf: children.filter { $0.pathExtension.lowercased() == "ncm" })
                 }
             } else if url.pathExtension.lowercased() == "ncm" {
@@ -1238,7 +1273,7 @@ struct AppMark: View {
                     LinearGradient(
                         colors: [
                             Color.white.opacity(0.78),
-                            Color.teal.opacity(0.18)
+                            Color.teal.opacity(0.18),
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
@@ -1358,14 +1393,17 @@ struct ContentView: View {
         .task {
             model.checkForUpdates()
         }
-        .alert(model.updatePrompt?.title ?? "", isPresented: Binding(
-            get: { model.updatePrompt != nil },
-            set: { presented in
-                if !presented {
-                    model.dismissUpdatePrompt()
+        .alert(
+            model.updatePrompt?.title ?? "",
+            isPresented: Binding(
+                get: { model.updatePrompt != nil },
+                set: { presented in
+                    if !presented {
+                        model.dismissUpdatePrompt()
+                    }
                 }
-            }
-        )) {
+            )
+        ) {
             if model.updatePrompt?.downloadURL != nil {
                 Button("前往下载") {
                     model.openUpdateDownload()
@@ -1395,11 +1433,13 @@ struct ContentView: View {
             Spacer(minLength: 0)
 
             StatusPill(title: "队列", value: "\(model.items.count)", systemImage: "tray.full", color: .blue)
-            StatusPill(title: "完成", value: "\(model.finishedCount)", systemImage: "checkmark.circle.fill", color: .green)
+            StatusPill(
+                title: "完成", value: "\(model.finishedCount)", systemImage: "checkmark.circle.fill", color: .green)
             StatusPill(
                 title: "引擎",
                 value: model.ffmpegStatusText.contains("未") ? "缺失" : "可用",
-                systemImage: model.ffmpegStatusText.contains("未") ? "exclamationmark.triangle.fill" : "waveform.circle.fill",
+                systemImage: model.ffmpegStatusText.contains("未")
+                    ? "exclamationmark.triangle.fill" : "waveform.circle.fill",
                 color: model.ffmpegStatusText.contains("未") ? .orange : .teal
             )
 
@@ -1545,10 +1585,13 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 9) {
                 SectionTitle(title: "输出", systemImage: "square.and.arrow.down")
                 HStack(spacing: 8) {
-                    TextField("输出目录", text: Binding(
-                        get: { model.outputDirectory.path },
-                        set: { model.outputDirectory = URL(fileURLWithPath: $0, isDirectory: true) }
-                    ))
+                    TextField(
+                        "输出目录",
+                        text: Binding(
+                            get: { model.outputDirectory.path },
+                            set: { model.outputDirectory = URL(fileURLWithPath: $0, isDirectory: true) }
+                        )
+                    )
                     .textFieldStyle(.roundedBorder)
 
                     Button(action: model.chooseOutputDirectory) {
@@ -1681,7 +1724,7 @@ struct TutorialView: View {
         ("4", "调整命名", "开启“用歌曲信息命名”后，将优先使用歌手和歌曲名；关闭后保留原 NCM 文件名。同名文件默认自动追加序号。"),
         ("5", "开始转换", "确认队列后点击“开始转换”。每首歌曲的状态、总进度和详细记录会实时显示，转换期间可以取消。"),
         ("6", "查看结果", "成功项目会显示输出文件位置。若解密后的音频头无法识别，程序会停止该文件，避免生成无法播放的伪 MP3。"),
-        ("7", "获取更新", "右上角循环箭头会检查 GitHub Release。启动时也会静默检查，只有发现新版本时才提示下载。")
+        ("7", "获取更新", "右上角循环箭头会检查 GitHub Release。启动时也会静默检查，只有发现新版本时才提示下载。"),
     ]
 
     var body: some View {
@@ -1816,7 +1859,10 @@ struct LogView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(10)
             }
-            .background(Color(nsColor: .textBackgroundColor).opacity(0.62), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(
+                Color(nsColor: .textBackgroundColor).opacity(0.62),
+                in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+            )
             .overlay {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .stroke(Color.primary.opacity(0.06), lineWidth: 1)
@@ -1920,7 +1966,8 @@ enum SelfTest {
             throw NCMConversionError.output("彩蛋计时器日期计算异常")
         }
         guard ReleaseUpdateChecker.isNewerVersion("v1.2.0", than: "1.1.2"),
-              !ReleaseUpdateChecker.isNewerVersion("1.2.0", than: "1.2.0") else {
+            !ReleaseUpdateChecker.isNewerVersion("1.2.0", than: "1.2.0")
+        else {
             throw NCMConversionError.output("版本比较异常")
         }
 
@@ -1954,7 +2001,7 @@ enum SelfTest {
             70, 218, 132, 64, 217, 166, 112, 195,
             68, 11, 211, 232, 95, 55, 88, 238,
             228, 34, 90, 131, 76, 19, 50, 174,
-            108, 173, 40, 122, 251, 145, 35, 59
+            108, 173, 40, 122, 251, 145, 35, 59,
         ]
         let encryptedKeyPlain = Data("neteasecloudmusic".utf8) + keyData
         let encryptedKey = NCMConverterCore.xor(
@@ -1965,12 +2012,13 @@ enum SelfTest {
         let metadata: [String: Any] = [
             "musicName": "Synthetic Track",
             "artist": [["Codex", 1]],
-            "format": "mp3"
+            "format": "mp3",
         ]
         let metadataJSON = try JSONSerialization.data(withJSONObject: metadata)
         let metadataPlain = Data("music:".utf8) + metadataJSON
         let metadataCipher = try NCMConverterCore.aes128ECBEncryptPKCS7(metadataPlain, key: NCMConverterCore.metaKey)
-        let metadataPayload = Data("163 key(Don't modify):".utf8)
+        let metadataPayload =
+            Data("163 key(Don't modify):".utf8)
             + Data(metadataCipher.base64EncodedString().utf8)
         let encryptedMetadata = NCMConverterCore.xor(data: metadataPayload, value: 0x63)
 
