@@ -3,7 +3,7 @@ name: Windows Native
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [main, refactor/architecture]
     paths:
       - "apps/windows/**"
       - "scripts/build_windows.sh"
@@ -50,13 +50,13 @@ jobs:
         run: |
           $makensis = Join-Path ${env:ProgramFiles(x86)} "NSIS/makensis.exe"
           $publish = (Resolve-Path "dist/windows/app").Path
-          $output = Join-Path $PWD "dist/windows/NCM-Batch-MP3-Setup-1.2.0-x64.exe"
+          $output = Join-Path $PWD "dist/windows/NCM-Batch-MP3-Setup-1.2.1-x64.exe"
           $icon = (Resolve-Path "apps/windows/assets/icon.ico").Path
-          & $makensis "/DVERSION=1.2.0" "/DPUBLISH_DIR=$publish" "/DOUTPUT_FILE=$output" "/DICON_FILE=$icon" "apps/windows/installer/installer.nsi"
+          & $makensis "/DVERSION=1.2.1" "/DPUBLISH_DIR=$publish" "/DOUTPUT_FILE=$output" "/DICON_FILE=$icon" "apps/windows/installer/installer.nsi"
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path $output)) { exit 1 }
 
       - uses: actions/upload-artifact@v4
         with:
-          name: NCM-Batch-MP3-Setup-1.2.0-x64
+          name: NCM-Batch-MP3-Setup-1.2.1-x64
           path: dist/windows/NCM-Batch-MP3-Setup-1.2.0-x64.exe
           if-no-files-found: error
