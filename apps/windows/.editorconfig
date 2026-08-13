@@ -1,0 +1,53 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.cs]
+# The codebase consistently uses var, including for built-in types.
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+# File-scoped namespaces and modern object creation.
+csharp_style_namespace_declarations = file_scoped:warning
+csharp_style_prefer_method_group_conversion = true:suggestion
+csharp_style_prefer_switch_expression = true:suggestion
+
+# Match the existing brace layout (braces on their own lines).
+csharp_new_line_before_open_brace = all
+
+# System usings first, unused usings are removed by dotnet format.
+dotnet_sort_system_directives_first = true
+csharp_using_directive_placement = outside_namespace:warning
+
+# Async hygiene: explicit ConfigureAwait on library code paths.
+dotnet_diagnostic.CA2007.severity = warning
+
+# The NCM container format fixes the cipher mode to AES-128-ECB;
+# CBC/CTS are not options here and the keys are format constants.
+dotnet_diagnostic.CA5358.severity = none
+
+# The WPF app layer: ConfigureAwait(false) is wrong in UI event handlers
+# (it would lose the dispatcher context), catch-all guards at the UI
+# boundary exist to show a MessageBox, and the app is zh-CN only with no
+# resource infrastructure.
+[NcmBatchMp3.App/*.cs]
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.CA1031.severity = none
+dotnet_diagnostic.CA1303.severity = none
+dotnet_diagnostic.CA1305.severity = none
+
+# Tests run without a synchronization context; ConfigureAwait is noise.
+[NcmBatchMp3.Tests/*.cs]
+dotnet_diagnostic.CA2007.severity = none
+
+# The WPF convention names the Application class "App", which collides
+# with the project namespace.
+[NcmBatchMp3.App/App.xaml.cs]
+dotnet_diagnostic.CA1724.severity = none

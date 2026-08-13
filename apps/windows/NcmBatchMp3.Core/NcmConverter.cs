@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace NcmBatchMp3.Core;
 
-public sealed class NcmConverter
+public static class NcmConverter
 {
     private static readonly byte[] Magic = Encoding.ASCII.GetBytes("CTENFDAM");
     private static readonly byte[] CoreKey = Convert.FromHexString("687A4852416D736F356B496E62617857");
@@ -14,7 +14,7 @@ public sealed class NcmConverter
     private const int ChunkSize = 1024 * 1024;
     private const int MaxCoverBytes = 32 * 1024 * 1024;
 
-    public async Task<ConversionResult> ConvertAsync(
+    public static async Task<ConversionResult> ConvertAsync(
         string inputPath,
         ConversionOptions options,
         string? ffmpegPath,
@@ -22,6 +22,7 @@ public sealed class NcmConverter
         IProgress<ConversionProgress>? progress = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(inputPath);
+        ArgumentNullException.ThrowIfNull(options);
         ArgumentException.ThrowIfNullOrWhiteSpace(options.OutputDirectory);
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -158,20 +159,22 @@ public sealed class NcmConverter
 
         try
         {
-            await using var input = new FileStream(
+            var input = new FileStream(
                 inputPath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read,
                 ChunkSize,
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
-            await using var output = new FileStream(
+            await using var inputScope = input.ConfigureAwait(false);
+            var output = new FileStream(
                 audioPath,
                 FileMode.CreateNew,
                 FileAccess.Write,
                 FileShare.None,
                 ChunkSize,
                 FileOptions.Asynchronous | FileOptions.SequentialScan);
+            await using var outputScope = output.ConfigureAwait(false);
 
             var cursor = new BinaryCursor(input);
             var header = await ReadHeaderAsync(cursor, fileInfo.Length, cancellationToken).ConfigureAwait(false);
@@ -191,7 +194,8 @@ public sealed class NcmConverter
                 if (firstBytes.Length < 64)
                 {
                     var captureLength = (int)Math.Min(64 - firstBytes.Length, length);
-                    firstBytes.Write(buffer, 0, captureLength);
+                    await firstBytes.WriteAsync(buffer.AsMemory(0, captureLength), cancellationToken)
+                        .ConfigureAwait(false);
                 }
 
                 await output.WriteAsync(buffer.AsMemory(0, length), cancellationToken).ConfigureAwait(false);
@@ -695,7 +699,7 @@ public sealed class NcmConverter
                     process.Kill(true);
                 }
             }
-            catch
+            catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception)
             {
                 // The process may have exited between the checks.
             }
@@ -724,7 +728,7 @@ public sealed class NcmConverter
                 Directory.Delete(path, true);
             }
         }
-        catch
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             // Temporary files can be cleaned by Windows if an antivirus still holds a handle.
         }
@@ -739,7 +743,7 @@ public sealed class NcmConverter
                 File.Delete(path);
             }
         }
-        catch
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException)
         {
             // A failed transcode must not hide the original conversion error.
         }

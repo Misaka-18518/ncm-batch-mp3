@@ -26,10 +26,10 @@ internal static class Program
             "https://github.com/enshuwu46-png/ncm-batch-mp3/releases/tag/v1.2.0",
             UpdateRules.OfficialReleaseUri(
                 "v1.2.0",
-                "https://github.com/enshuwu46-png/ncm-batch-mp3/releases/tag/v1.2.0")?.AbsoluteUri,
+                new Uri("https://github.com/enshuwu46-png/ncm-batch-mp3/releases/tag/v1.2.0"))?.AbsoluteUri,
             "官方更新地址");
         AssertTrue(
-            UpdateRules.OfficialReleaseUri("v1.2.0", "https://example.com/update") is null,
+            UpdateRules.OfficialReleaseUri("v1.2.0", new Uri("https://example.com/update")) is null,
             "拦截非官方更新地址");
 
         var keyBox = NcmConverter.BuildKeyBox(Encoding.UTF8.GetBytes("test-stream-key"));
@@ -53,15 +53,15 @@ internal static class Program
                 .ToArray();
             await BuildSyntheticNcmAsync(sourcePath, expectedAudio, "mp3", "Synthetic Track", CoverPng);
 
-            var converter = new NcmConverter();
-            var result = await converter.ConvertAsync(
+            var result = await NcmConverter.ConvertAsync(
                 sourcePath,
                 new ConversionOptions(outputDirectory, OutputMode.PreferMp3, true, false),
                 null,
                 CancellationToken.None);
 
             AssertEqual("Codex - Synthetic Track.mp3", Path.GetFileName(result.OutputPath), "元数据命名");
-            AssertTrue(File.ReadAllBytes(result.OutputPath).AsSpan().SequenceEqual(expectedAudio), "NCM 往返字节一致");
+            var actualAudio = await File.ReadAllBytesAsync(result.OutputPath);
+            AssertTrue(actualAudio.AsSpan().SequenceEqual(expectedAudio), "NCM 往返字节一致");
             Console.WriteLine($"native core roundtrip ok: {Path.GetFileName(result.OutputPath)}");
         }
         finally

@@ -10,18 +10,21 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
 using NcmBatchMp3.Core;
+using DataFormats = System.Windows.DataFormats;
+using DragDropEffects = System.Windows.DragDropEffects;
+using DragEventArgs = System.Windows.DragEventArgs;
 using Forms = System.Windows.Forms;
 using MessageBox = System.Windows.MessageBox;
 using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
-using DragEventArgs = System.Windows.DragEventArgs;
-using DataFormats = System.Windows.DataFormats;
-using DragDropEffects = System.Windows.DragDropEffects;
 
 namespace NcmBatchMp3.App;
 
+// CA1001: the window disposes its owned fields in OnClosed, which is the
+// idiomatic WPF shutdown path; implementing IDisposable on a Window is not.
+#pragma warning disable CA1001
 public partial class MainWindow : Window
 {
-    private readonly NcmConverter _converter = new();
+#pragma warning restore CA1001
     private readonly HttpClient _httpClient = new() { Timeout = TimeSpan.FromSeconds(7) };
     private CancellationTokenSource? _conversionCancellation;
     private string? _ffmpegPath;
@@ -127,7 +130,7 @@ public partial class MainWindow : Window
         UpdateInterface();
     }
 
-    private static IReadOnlyList<string> CollectNcmFiles(IEnumerable<string> paths, bool recursive)
+    private static string[] CollectNcmFiles(IEnumerable<string> paths, bool recursive)
     {
         var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var candidate in paths)
@@ -304,7 +307,7 @@ public partial class MainWindow : Window
 
             try
             {
-                var result = await _converter.ConvertAsync(
+                var result = await NcmConverter.ConvertAsync(
                     item.FilePath,
                     options,
                     _ffmpegPath,
@@ -409,14 +412,17 @@ public partial class MainWindow : Window
 
         try
         {
-            using var response = await _httpClient.GetAsync(UpdateRules.LatestReleaseApi);
+            using var response = await _httpClient.GetAsync(new Uri(UpdateRules.LatestReleaseApi));
             response.EnsureSuccessStatusCode();
             await using var stream = await response.Content.ReadAsStreamAsync();
             using var document = await JsonDocument.ParseAsync(stream);
             var root = document.RootElement;
             var tagName = root.TryGetProperty("tag_name", out var tag) ? tag.GetString() : null;
             var releaseUrl = root.TryGetProperty("html_url", out var url) ? url.GetString() : null;
-            var officialUri = UpdateRules.OfficialReleaseUri(tagName, releaseUrl);
+            var parsedReleaseUri = Uri.TryCreate(releaseUrl?.Trim(), UriKind.Absolute, out var releaseUri)
+                ? releaseUri
+                : null;
+            var officialUri = UpdateRules.OfficialReleaseUri(tagName, parsedReleaseUri);
             if (officialUri is null)
             {
                 throw new InvalidDataException("更新地址不可信");
