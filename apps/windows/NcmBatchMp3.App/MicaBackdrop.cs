@@ -56,14 +56,16 @@ internal static class MicaBackdrop
         return true;
     }
 
-    [DllImport("dwmapi.dll")]
+    [DllImport("dwmapi.dll", ExactSpelling = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static extern int DwmSetWindowAttribute(
         IntPtr windowHandle,
         int attribute,
         ref int attributeValue,
         int attributeSize);
 
-    [DllImport("dwmapi.dll")]
+    [DllImport("dwmapi.dll", ExactSpelling = true)]
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     private static extern int DwmExtendFrameIntoClientArea(IntPtr windowHandle, ref Margins margins);
 
     [StructLayout(LayoutKind.Sequential)]

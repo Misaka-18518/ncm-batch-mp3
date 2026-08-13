@@ -31,18 +31,24 @@ public static class UpdateRules
 
     public static Uri? OfficialReleaseUri(string? tagName, string? releaseUrl)
     {
+        return Uri.TryCreate(releaseUrl?.Trim(), UriKind.Absolute, out var uri)
+            ? OfficialReleaseUri(tagName, uri)
+            : null;
+    }
+
+    public static Uri? OfficialReleaseUri(string? tagName, Uri? releaseUri)
+    {
         tagName = tagName?.Trim();
-        if (string.IsNullOrWhiteSpace(tagName) ||
-            !Uri.TryCreate(releaseUrl?.Trim(), UriKind.Absolute, out var uri))
+        if (string.IsNullOrWhiteSpace(tagName) || releaseUri is null)
         {
             return null;
         }
 
         var expectedPath = $"/{Owner}/{Repository}/releases/tag/{Uri.EscapeDataString(tagName)}";
-        return uri.Scheme == Uri.UriSchemeHttps &&
-               uri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) &&
-               uri.AbsolutePath == expectedPath
-            ? uri
+        return releaseUri.Scheme == Uri.UriSchemeHttps &&
+               releaseUri.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) &&
+               releaseUri.AbsolutePath == expectedPath
+            ? releaseUri
             : null;
     }
 
